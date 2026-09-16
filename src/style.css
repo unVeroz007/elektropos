@@ -1,0 +1,272 @@
+:root{font-family:Inter,Arial,sans-serif;color:#16352c;background:#f5f7f4;font-synthesis:none}
+*{box-sizing:border-box}
+body{margin:0}
+button,input{font:inherit}
+button,.button-link{border:0;border-radius:10px;background:#135e44;color:#fff;padding:12px 17px;font-weight:650;cursor:pointer;text-decoration:none}
+button:hover:not(:disabled){background:#0d4834}
+button.ghost{background:transparent;color:#135e44;border:1px solid #135e44}
+button.primary{background:#135e44;font-size:18px;padding:14px}
+button:disabled{opacity:.55;cursor:not-allowed}
+input,select{width:100%;padding:10px 12px;border:1px solid #cbd8d0;border-radius:9px;background:#fff;color:#16352c}
+input:focus,select:focus{outline:2px solid #62b892;border-color:transparent}
+label{display:grid;gap:7px;font-size:14px;font-weight:600}
+small{color:#6b7a70}
+p{color:#667a70;line-height:1.5;margin:.4em 0}
+h1,h2,h3{margin:.2em 0 .4em}
+h1{font-size:38px}
+h2{font-size:28px}
+h3{font-size:18px}
+.eyebrow{font-size:11px;letter-spacing:.16em;font-weight:800;color:#4e8a72;text-transform:uppercase}
+.role{display:inline-block;padding:2px 8px;border-radius:6px;background:#ffffff22;color:#d6e9dd;font-size:11px;font-weight:700;letter-spacing:.08em;margin-left:8px}
+
+/* Login */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:20px;background:radial-gradient(circle at 75% 20%,#d7e9dc,#f5f7f4 52%)}
+.login-card{background:#fff;width:min(430px,100%);padding:38px;border:1px solid #dfe8df;border-radius:20px;box-shadow:0 20px 50px #2d5f3820}
+.login-card form{display:grid;gap:17px;margin:26px 0}
+.notice{padding:12px 14px;border-radius:9px;background:#fff5da;color:#76570f;font-size:14px;margin-bottom:14px}
+.error{background:#ffe9e4;color:#8e3220;padding:12px 14px;border-radius:9px;font-size:14px}
+.floating-error{position:fixed;top:10px;right:10px;z-index:5;background:#ffe9e4;padding:12px;border-radius:8px}
+.empty{background:#f0f5f1;color:#5a6e62;padding:14px;border-radius:9px;font-size:14px;border:1px dashed #b5c4b6}
+.loading{min-height:100vh;display:grid;place-items:center;color:#5a6e62}
+
+/* App shell */
+.app{display:flex;min-height:100vh}
+.sidebar{width:245px;flex-shrink:0;background:#163b2e;color:#fff;padding:25px 16px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:11px;padding:0 10px 28px;border-bottom:1px solid #ffffff22}
+.brand-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;background:#f1bb4e;color:#214834;font-weight:900;font-size:22px}
+.brand strong,.brand small{display:block}
+.brand small{color:#afcdbd;margin-top:3px}
+.sidebar nav{display:grid;gap:6px;padding:22px 0}
+.sidebar a{color:#d6e9dd;padding:12px 14px;text-decoration:none;border-radius:8px;font-weight:600}
+.sidebar a:hover,.sidebar a.active{background:#ffffff15;color:#fff}
+.sidebar-foot{margin-top:auto;color:#94aea0;font-size:12px;padding:14px 10px;border-top:1px solid #ffffff22}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.main>header{display:flex;align-items:center;justify-content:space-between;padding:18px 26px;background:#fff;border-bottom:1px solid #e0e6e1}
+.online-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#62b892;margin-right:8px;vertical-align:middle}
+.main>main{padding:24px 26px;overflow:auto}
+.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:20px;gap:14px;flex-wrap:wrap}
+
+/* Catalog */
+.search-label{margin-bottom:18px}
+.products{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.product{background:#fff;padding:18px;border-radius:12px;border:1px solid #dfe8df;box-shadow:0 1px 2px #16352c0d}
+.product-top{display:flex;justify-content:space-between;color:#5a6e62;font-size:12px;margin-bottom:6px}
+.sku{font-family:monospace;background:#f0f5f1;padding:2px 6px;border-radius:5px}
+.unit-list{display:flex;flex-direction:column;gap:4px;margin:8px 0;font-size:14px}
+.stock-row{display:flex;gap:14px;color:#16352c;font-size:13px;margin-top:6px;padding-top:6px;border-top:1px solid #eef1ed}
+
+/* Form */
+.form-page{max-width:680px}
+.editor{display:grid;gap:14px;grid-template-columns:1fr 1fr;background:#fff;padding:22px;border-radius:14px;border:1px solid #dfe8df}
+.editor label{display:grid;gap:6px}
+.editor .check{flex-direction:row;align-items:center;gap:8px;display:flex}
+.check input{width:auto}
+
+/* Cashier */
+.cashier-layout{display:grid;gap:18px;grid-template-columns:1.4fr 1fr}
+.cashier-left,.cashier-right{background:#fff;padding:20px;border-radius:14px;border:1px solid #dfe8df}
+.product-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-bottom:18px}
+.product-card{padding:12px;border-radius:10px;border:1px solid #dfe8df;background:#f8faf6;cursor:pointer;transition:all .12s}
+.product-card:hover{border-color:#135e44;background:#eef5ec}
+.product-card h4{margin:6px 0 4px;font-size:14px}
+.product-card .sku{font-size:10px}
+.product-card div{font-size:13px;font-weight:700;color:#135e44}
+.product-card small{font-size:11px;color:#5a6e62}
+.cart-item{display:grid;grid-template-columns:2fr 1fr 80px auto;gap:10px;align-items:center;padding:10px;border-bottom:1px solid #eef1ed;font-size:14px}
+.cart-item strong{font-size:14px}
+.cart-item small{color:#5a6e62}
+.cart-total{margin-top:18px;padding:16px;background:#f0f5f1;border-radius:10px;font-size:15px;display:grid;gap:8px}
+.cart-total .total{font-size:18px;color:#135e44;font-weight:700}
+.cart-total .neg{color:#a03e1e}
+.form-group{display:grid;gap:12px;margin-bottom:14px}
+.discount-group{background:#fff8e8;padding:12px;border-radius:9px}
+.change-display{background:#eef5ec;padding:10px;border-radius:9px;color:#135e44;font-size:14px}
+
+/* Receipt */
+.receipt-view{max-width:420px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #dfe8df;font-family:monospace}
+.receipt-header{text-align:center;border-bottom:1px dashed #cbd8d0;padding-bottom:14px;margin-bottom:14px}
+.receipt-header h2{font-size:18px;margin:0 0 6px}
+.receipt-header p{margin:3px 0;font-size:13px;color:#16352c}
+.receipt-body table{width:100%;border-collapse:collapse;font-size:13px}
+.receipt-body th,.receipt-body td{padding:6px 4px;text-align:left;border-bottom:1px dotted #dfe8df}
+.receipt-body th{font-weight:700;color:#5a6e62}
+.receipt-summary{margin-top:14px;padding-top:14px;border-top:1px dashed #cbd8d0;display:grid;gap:6px;font-size:14px}
+.receipt-summary .total{font-size:18px;font-weight:700;color:#135e44}
+.receipt-footer{display:flex;gap:8px;margin-top:20px}
+.receipt-footer button{flex:1}
+.receipt-view.receipt-w58{max-width:300px}
+.receipt-view.receipt-w80{max-width:400px}
+
+@media print {
+  .sidebar,.main>header,.receipt-footer{display:none !important}
+  .receipt-view{border:none;box-shadow:none}
+}
+
+@media (max-width: 900px) {
+  .cashier-layout{grid-template-columns:1fr}
+  .editor{grid-template-columns:1fr}
+}
+
+/* Section actions */
+.section-actions{display:flex;gap:8px;flex-wrap:wrap}
+button.small{padding:6px 10px;font-size:12px}
+
+/* Drafts */
+.drafts-panel{background:#fff;padding:14px 18px;border-radius:12px;border:1px solid #dfe8df;margin-bottom:16px}
+.drafts-panel h3{margin:0 0 10px;font-size:16px}
+.draft-list{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.draft-card{background:#f8faf6;padding:10px 12px;border-radius:9px;border:1px solid #e6ece7;cursor:pointer}
+.draft-card:hover{border-color:#135e44}
+.draft-card-header{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px}
+.draft-card-header strong{font-size:13px}
+.draft-card small{display:block;font-size:11px;color:#5a6e62}
+
+/* History */
+.filter-group{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:18px;background:#fff;padding:14px;border-radius:12px;border:1px solid #dfe8df}
+.filter-group label{min-width:150px}
+.invoice-list{display:grid;gap:10px}
+.invoice-card{background:#fff;padding:14px 16px;border-radius:11px;border:1px solid #dfe8df;cursor:pointer;transition:border .12s}
+.invoice-card:hover{border-color:#135e44}
+.invoice-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.invoice-details{display:flex;justify-content:space-between;font-size:14px;margin-bottom:4px}
+.invoice-details .total{font-weight:700;color:#135e44}
+.invoice-footer{display:flex;justify-content:space-between;font-size:12px;color:#5a6e62}
+.payment-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;letter-spacing:.05em}
+.payment-badge.paid{background:#dff3e6;color:#135e44}
+.payment-badge.partial{background:#fff5da;color:#76570f}
+.payment-badge.unpaid{background:#ffe9e4;color:#8e3220}
+.pagination{margin-top:14px;text-align:center;color:#5a6e62;font-size:13px}
+
+/* Cash session */
+.session-card{background:#fff;padding:24px;border-radius:14px;border:1px solid #dfe8df;max-width:560px}
+.status-badge{display:inline-block;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:800;letter-spacing:.08em;margin-bottom:14px}
+.status-badge.open{background:#dff3e6;color:#135e44}
+.status-badge.closed{background:#f0e6e6;color:#7a4a4a}
+.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eef1ed;font-size:14px}
+.info-row.highlight{font-size:16px;padding-top:12px;border-bottom:none}
+.info-row.highlight strong{color:#135e44}
+.close-form,.open-form{display:grid;gap:12px;margin-top:20px;padding-top:18px;border-top:1px dashed #cbd8d0}
+.close-form h3{font-size:16px;margin:0}
+.variance-preview{background:#eef5ec;padding:10px;border-radius:9px;font-size:14px;color:#135e44}
+
+/* Return */
+.return-page{max-width:820px}
+.invoice-card-header{display:flex;justify-content:space-between;align-items:center;background:#fff;padding:16px;border-radius:12px;border:1px solid #dfe8df;margin-bottom:16px}
+.invoice-card-header .total{font-size:20px;font-weight:700;color:#135e44}
+.return-list{display:grid;gap:12px;margin-bottom:18px}
+.return-card{background:#fff;padding:16px;border-radius:12px;border:1px solid #dfe8df}
+.return-card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.return-card-info{margin-bottom:10px}
+.return-card-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.return-summary{background:#f0f5f1;padding:14px;border-radius:10px;margin-bottom:16px;font-size:15px}
+.return-summary strong{color:#135e44;font-size:18px}
+.success{background:#dff3e6;color:#135e44;padding:12px 14px;border-radius:9px;font-size:14px;margin-bottom:12px}
+.note{margin-top:12px}
+.neg{color:#a03e1e}
+
+@media (max-width: 640px) {
+  .return-card-controls{grid-template-columns:1fr}
+  .filter-group label{min-width:100%}
+}
+
+/* Dashboard */
+.dashboard-grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.dash-card{background:#fff;padding:20px;border-radius:12px;border:1px solid #dfe8df}
+.dash-label{font-size:13px;color:#5a6e62;margin-bottom:6px}
+.dash-value{font-size:28px;font-weight:800;color:#135e44}
+.dash-value.neg{color:#a03e1e}
+.dash-value.warn{color:#76570f}
+.dash-value.open{color:#135e44}
+.dash-value.closed{color:#7a4a4a}
+.dash-sub{font-size:13px;color:#667a70;margin-top:4px}
+
+/* Reports */
+.report-grid{background:#fff;padding:18px;border-radius:12px;border:1px solid #dfe8df;display:grid;gap:0}
+.report-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eef1ed;font-size:15px}
+.report-row.total{border-top:2px solid #135e44;border-bottom:none;font-weight:700;font-size:17px;padding-top:14px}
+.report-row .neg{color:#a03e1e}
+
+/* Service tickets */
+.ticket-list{display:grid;gap:10px}
+.ticket-card{background:#fff;padding:14px 16px;border-radius:11px;border:1px solid #dfe8df;cursor:pointer;transition:border .12s}
+.ticket-card:hover{border-color:#135e44}
+.ticket-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ticket-header strong{font-size:14px}
+.ticket-meta{display:flex;justify-content:space-between;font-size:12px;color:#5a6e62;margin-top:4px}
+.ticket-status-row{display:flex;gap:14px;font-size:14px;margin:12px 0;padding:10px;background:#f8faf6;border-radius:9px}
+.transition-buttons{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.events-section{margin-top:14px}
+.events-section h4{font-size:15px;margin-bottom:8px}
+.event-row{display:grid;grid-template-columns:2fr 2fr 2fr;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px solid #eef1ed}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:center;z-index:100;padding:20px}
+.modal-content{background:#fff;width:min(680px,100%);max-height:85vh;overflow-y:auto;border-radius:16px;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,.15)}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.status-badge.new{background:#e8f4fd;color:#1a5276}
+.status-badge.inspecting{background:#fff5da;color:#76570f}
+.status-badge.awaiting_approval{background:#f0e8fd;color:#5b2c6f}
+.status-badge.working{background:#e8f0fd;color:#1a3e6f}
+.status-badge.ready,.status-badge.diambil{background:#dff3e6;color:#135e44}
+.status-badge.cancelled,.status-badge.unrepairable{background:#f0e6e6;color:#7a4a4a}
+
+/* Form actions */
+.form-actions{display:flex;gap:8px;align-items:center}
+textarea{width:100%;padding:10px 12px;border:1px solid #cbd8d0;border-radius:9px;background:#fff;color:#16352c;font:inherit;resize:vertical}
+textarea:focus{outline:2px solid #62b892;border-color:transparent}
+.success{background:#dff3e6;color:#135e44;padding:12px 14px;border-radius:9px;font-size:14px}
+
+/* Barcode scanner */
+.scanner-panel{background:#fff;border:1px solid #dfe8df;border-radius:12px;padding:14px;margin-bottom:16px}
+.scanner-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.scanner-head strong{display:block;font-size:15px}
+.scanner-head small{display:block;color:#5a6e62;font-size:12px;margin-top:2px}
+.scanner-last{margin-top:10px;font-size:13px;color:#5a6e62}
+.scanner-last code{background:#f0f5f1;padding:2px 6px;border-radius:5px;color:#135e44;font-weight:700}
+.scanner-input{display:flex;gap:8px;margin-top:10px}
+.scanner-input input{flex:1;font-family:monospace}
+.scanner-input button{white-space:nowrap}
+.scanner-camera{margin-top:12px;display:grid;gap:10px}
+.scanner-video{width:100%;max-height:280px;background:#16352c;border-radius:10px;object-fit:cover}
+.scanner-viewport{position:relative;line-height:0}
+.scanner-reticle{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:75%;height:70%;border:2px solid #f1bb4e;border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.35);pointer-events:none}
+.scanner-device{margin-top:8px}
+.scanner-device select{width:100%}
+.scanner-camera-actions{display:flex;gap:8px}
+.scanner-hint{margin-top:10px}
+.scanner-hint small{color:#819187;font-size:12px}
+
+/* Scanner untuk pengguna non-teknis: umpan balik besar & jelas */
+.scan-flash{display:flex;align-items:center;gap:12px;background:#dff3e6;border:2px solid #135e44;border-radius:12px;padding:14px 18px;margin-top:12px;animation:scanFlashIn .25s ease}
+.scan-flash-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#135e44;color:#fff;font-size:22px;font-weight:800;flex-shrink:0}
+.scan-flash-text{font-size:17px;color:#135e44}
+.scan-flash-text strong{font-family:monospace;font-size:19px}
+@keyframes scanFlashIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.scanner-live{position:absolute;top:8px;left:8px;background:rgba(163,62,30,.85);color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px;animation:livePulse 1.6s infinite}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.55}}
+.scanner-mega-hint{display:grid;gap:4px;background:#fff8e8;border:1px solid #f1bb4e;border-radius:10px;padding:12px 14px;margin-top:10px}
+.scanner-mega-hint strong{font-size:16px;color:#76570f}
+.scanner-mega-hint span{font-size:14px;color:#7a6a3a}
+.scanner-panel .scanner-input{margin-top:12px}
+
+/* Barcode belum terdaftar di kasir */
+.unknown-barcode{background:#fff8e8;border:2px solid #f1bb4e;border-radius:12px;padding:16px;margin-bottom:16px;display:grid;gap:12px}
+.unknown-barcode-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.unknown-barcode-head strong{font-size:16px;color:#76570f}
+.unknown-barcode-head code{background:#fff;padding:2px 8px;border-radius:6px;font-size:16px}
+.unknown-barcode p{margin:0;font-size:14px;color:#7a6a3a}
+.link-product-list{display:grid;gap:8px;max-height:320px;overflow-y:auto}
+.link-product{background:#fff;border:1px solid #e6dcc0;border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.link-product strong{font-size:15px}
+.link-product small{color:#6b7a70}
+.link-product-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Stock intake */
+.intake-list{display:grid;gap:12px;margin:16px 0}
+.intake-card{background:#fff;padding:16px;border-radius:12px;border:1px solid #dfe8df}
+.intake-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.intake-controls{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.check-inline{display:flex;flex-direction:row;align-items:center;gap:8px;font-weight:600}
+.check-inline input{width:auto}
+.default-badge{background:#eef5ec;color:#135e44;padding:1px 6px;border-radius:5px;font-size:11px;font-weight:700}
+.product-card-top{display:flex;justify-content:space-between;font-size:11px;color:#5a6e62;margin-bottom:4px}
+.unit-info{display:flex;flex-wrap:wrap;gap:6px;font-size:13px;color:#16352c;margin:4px 0}
+@media (max-width: 640px){.intake-controls{grid-template-columns:1fr}}

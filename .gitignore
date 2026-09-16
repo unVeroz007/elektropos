@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.*.local
+.local/
+coverage/
+backups/
+*.tsbuildinfo
+supabase/.branches/
+supabase/.profiles/
+supabase/.temp/

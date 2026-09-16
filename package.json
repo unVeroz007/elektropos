@@ -1,0 +1,44 @@
+{
+  "name": "elektropos",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b --pretty false",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:db": "node scripts/test-db.mjs",
+    "setup:demo": "node --env-file=.env scripts/setup-demo.mjs",
+    "backup": "node --env-file=.env scripts/backup.mjs",
+    "restore": "node scripts/restore.mjs",
+    "verify:flows": "node --env-file=.env scripts/verify-flows.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.0.0",
+    "@tanstack/react-query": "^5.102.8",
+    "@zxing/browser": "^0.1.5",
+    "@zxing/library": "^0.21.3",
+    "decimal.js": "^10.0.0",
+    "dexie": "^4.4.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "globals": "^15.0.0",
+    "supabase": "^2.117.0",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}
