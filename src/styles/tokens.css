@@ -1,0 +1,47 @@
+/*
+ * Token desain bersama. Dipakai semua modul; ubah nilai di sini, bukan di tiap fitur.
+ * Target pengguna senior: teks utama >= 16px, target sentuh >= 48px, kontras tinggi.
+ */
+:root {
+  --color-bg: #f5f7f4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f0f5f1;
+  --color-border: #d5e0d7;
+  --color-text: #16352c;
+  --color-text-muted: #4f6358;
+  --color-primary: #135e44;
+  --color-primary-hover: #0d4834;
+  --color-primary-contrast: #ffffff;
+  --color-accent: #f1bb4e;
+  --color-danger: #a03e1e;
+  --color-danger-bg: #ffe9e4;
+  --color-warning: #76570f;
+  --color-warning-bg: #fff5da;
+  --color-success: #135e44;
+  --color-success-bg: #dff3e6;
+  --color-info: #1a5276;
+  --color-info-bg: #e8f4fd;
+  --color-focus: #2f8f68;
+
+  --font-family: Inter, 'Segoe UI', Arial, sans-serif;
+  --font-size-sm: 15px;
+  --font-size-base: 17px;
+  --font-size-lg: 20px;
+  --font-size-xl: 26px;
+  --font-size-money: 30px;
+  --line-height: 1.5;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius: 10px;
+  --radius-lg: 14px;
+  --touch-target: 48px;
+  --shadow: 0 1px 3px rgba(22, 53, 44, 0.08);
+
+  --breakpoint-mobile: 768px; /* referensi; media query memakai angka literal */
+}
