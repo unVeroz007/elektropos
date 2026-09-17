@@ -77,7 +77,10 @@ begin
     v_res := public.finalize_sale_v1(jsonb_build_object(
       'operation_id', ('e0000000-0000-4000-8000-000000000' || lpad((100+i)::text,3,'0'))::uuid,
       'items', jsonb_build_array(jsonb_build_object(
-        'product_unit_id', 'a1000000-0000-4000-8000-000000000002', 'qty', '0.1')),
+        'product_unit_id', 'a1000000-0000-4000-8000-000000000002', 'qty', '0.1',
+        'position_id', (select e->>'position_id' from jsonb_array_elements(public.list_sellable_positions_v1(
+          jsonb_build_object('product_id', 'a2000000-0000-4000-8000-000000000002'))->'positions') e
+          where e->>'label' = 'PRESISI-01'))),
       'payment', jsonb_build_object('method', 'TRANSFER', 'confirmed', true)));
     if not (v_res->>'ok')::boolean then raise exception 'AT-05: penjualan % gagal', i; end if;
   end loop;
