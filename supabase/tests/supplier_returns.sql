@@ -177,6 +177,21 @@ begin
   perform pg_temp.fails('staff', 'list_supplier_returns_v1', '{}', 'FORBIDDEN');
 end $$;
 
+-- Integrasi laporan: retur distributor tampil untuk owner, tersembunyi dari staff.
+do $$
+declare v jsonb; v_today text := (now() at time zone 'Asia/Jakarta')::date::text;
+begin
+  v := pg_temp.rpc('owner', 'get_report_v1', jsonb_build_object('start_date', v_today, 'end_date', v_today));
+  perform pg_temp.eq((v->'supplier_returns'->>'count')::int,
+    (select count(*)::int from private.supplier_returns), 'jumlah retur distributor di laporan');
+  perform pg_temp.eq(v->'supplier_returns'->>'claim_value',
+    private.ops_money((select sum(claim_value) from private.supplier_returns)), 'nilai klaim di laporan');
+  perform pg_temp.eq(v->'supplier_returns'->>'settlement_difference',
+    private.ops_money((select coalesce(sum(settlement_difference), 0) from private.supplier_returns)), 'selisih penyelesaian di laporan');
+  v := pg_temp.rpc('staff', 'get_report_v1', jsonb_build_object('start_date', v_today, 'end_date', v_today));
+  perform pg_temp.eq(v ? 'supplier_returns', false, 'staff tanpa data modal retur distributor');
+end $$;
+
 -- Invariant ledger + tidak ada stok/modal negatif.
 do $$ begin
   perform pg_temp.eq((select count(*) from private.stock_positions p where p.qty_base <>
