@@ -558,19 +558,35 @@ export function Cashier({ profile }: { profile: Profile }) {
             </label>
 
             {paymentMethod === 'CASH' && (
-              <label>Uang diterima (Rupiah)
-                <input
-                  type="number"
-                  value={tendered}
-                  onChange={e => setTendered(e.target.value)}
-                  placeholder="0"
-                />
-              </label>
+              <>
+                <label>Uang diterima dari pembeli
+                  <input
+                    type="number"
+                    value={tendered}
+                    onChange={e => setTendered(e.target.value)}
+                    placeholder="Ketik jumlah uang"
+                  />
+                </label>
+
+                {/* Nominal cepat: uang pas dan pecahan umum */}
+                <div className="quick-cash">
+                  <button type="button" className="ghost small" onClick={() => setTendered(total.toFixed(0))}>
+                    Uang Pas
+                  </button>
+                  {[5000, 10000, 20000, 50000, 100000].map(nominal => (
+                    <button key={nominal} type="button" className="ghost small" onClick={() => setTendered(String(nominal))}>
+                      {nominal >= 1000 ? `${nominal / 1000}rb` : nominal}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
 
             {paymentMethod === 'CASH' && tendered && (
-              <div className="change-display">
-                Kembalian: <strong>Rp{rupiahHalfUp(change.toFixed(0))}</strong>
+              <div className={change.lessThan(0) ? 'error' : 'change-display'}>
+                {change.lessThan(0)
+                  ? <>Uang kurang Rp{rupiahHalfUp(change.abs().toFixed(0))}</>
+                  : <>Kembalian: <strong>Rp{rupiahHalfUp(change.toFixed(0))}</strong></>}
               </div>
             )}
           </div>

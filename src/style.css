@@ -81,6 +81,8 @@ h3{font-size:18px}
 .form-group{display:grid;gap:12px;margin-bottom:14px}
 .discount-group{background:#fff8e8;padding:12px;border-radius:9px}
 .change-display{background:#eef5ec;padding:10px;border-radius:9px;color:#135e44;font-size:14px}
+.quick-cash{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.quick-cash button{flex:1 1 70px}
 
 /* Receipt */
 .receipt-view{max-width:420px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;border:1px solid #dfe8df;font-family:monospace}
