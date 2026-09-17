@@ -158,7 +158,7 @@ begin
   v_res := public.create_service_ticket_v1(jsonb_build_object(
     'operation_id', 'a2700000-0000-4000-8000-000000000002',
     'customer_name', 'Foto Test', 'customer_phone', '081234567891',
-    'equipment_type', 'Radio', 'complaint', 'Berisik',
+    'equipment_type', 'Radio', 'complaint', 'Berisik', 'initial_condition', 'Normal',
     'service_location', 'STORE'));
   v_ticket := (v_res->>'entity_id')::uuid;
 

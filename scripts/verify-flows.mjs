@@ -121,7 +121,7 @@ async function main() {
   // Servis: buat tiket + transisi
   const ticket = await rpc('create_service_ticket_v1', staff, {
     p_input: { operation_id: uid(), customer_name: 'Uji Demo', customer_phone: '081200000000',
-      equipment_type: 'Radio', complaint: 'Mati total', service_location: 'STORE' },
+      equipment_type: 'Radio', complaint: 'Mati total', initial_condition: 'Casing utuh', service_location: 'STORE' },
   })
   check('Servis: buat tiket', ticket.ok && ticket.data?.ok === true, ticket.raw.slice(0, 120))
 
