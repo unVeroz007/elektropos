@@ -107,6 +107,13 @@ try {
 } catch (err) { fail('AT-03 barcode', err.message) }
 
 console.log('')
+console.log('[P1+P2] AT-06 — roll kontinu, sisa potongan, retur posisi baru')
+try {
+  psqlFile(join(root, 'supabase', 'tests', 'p1_at06.sql'))
+  pass('AT-06 6m+4m jual 10m, retur buat posisi baru')
+} catch (err) { fail('AT-06', err.message) }
+
+console.log('')
 console.log('[P2] AT-08 — harga berubah (PRICE_CHANGED)')
 try {
   psqlFile(join(root, 'supabase', 'tests', 'p2_price_changed.sql'))
