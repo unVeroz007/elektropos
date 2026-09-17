@@ -46,6 +46,8 @@ type ZxingReader = {
 export const MAX_PROCESS_WIDTH = 1280
 /** Jeda antar percobaan decode (ms). */
 export const SCAN_INTERVAL_MS = 100
+/** Kode sama dihitung lagi hanya bila tidak terlihat selama jeda ini (ms). */
+export const REPEAT_AFTER_ABSENT_MS = 1200
 
 /** Bunyi bip singkat saat barcode terbaca, tanpa file audio eksternal. */
 function playBeep() {
@@ -82,7 +84,9 @@ export function useCameraScanner(onScan: (code: string) => void) {
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<number | null>(null)
   const activeRef = useRef(false)
-  const lastRef = useRef<{ code: string; at: number } | null>(null)
+  const lastRef = useRef<{ code: string; seenAt: number } | null>(null)
+  // Dinaikkan setiap stop(); start() yang masih menunggu kamera membatalkan diri bila token berubah.
+  const sessionRef = useRef(0)
   const onScanRef = useRef(onScan)
   onScanRef.current = onScan
 
@@ -106,6 +110,7 @@ export function useCameraScanner(onScan: (code: string) => void) {
   }, [refreshDevices])
 
   const stop = useCallback(() => {
+    sessionRef.current += 1
     activeRef.current = false
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current)
@@ -119,6 +124,7 @@ export function useCameraScanner(onScan: (code: string) => void) {
 
   const start = useCallback(async () => {
     if (activeRef.current) return
+    const session = ++sessionRef.current
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
       setState('unsupported')
       setError('Perangkat ini tidak menyediakan akses kamera. Ketik kode secara manual.')
@@ -151,6 +157,11 @@ export function useCameraScanner(onScan: (code: string) => void) {
         },
         audio: false,
       })
+      if (session !== sessionRef.current) {
+        // Panel ditutup saat izin kamera masih diminta: jangan biarkan kamera menyala.
+        stream.getTracks().forEach(t => t.stop())
+        return
+      }
       streamRef.current = stream
       video.srcObject = stream
       video.setAttribute('playsinline', 'true')
@@ -189,11 +200,13 @@ export function useCameraScanner(onScan: (code: string) => void) {
         setLastDetected(code)
         setError('')
         const last = lastRef.current
-        if (!last || last.code !== code || now - last.at > 1500) {
-          lastRef.current = { code, at: now }
-          playBeep()
-          onScanRef.current(code)
-        }
+        // Barcode yang terus terlihat di kamera hanya dihitung sekali. Scan ulang kode
+        // yang sama baru dihitung setelah barcode keluar dari bingkai sejenak.
+        const repeated = last !== null && last.code === code && now - last.seenAt < REPEAT_AFTER_ABSENT_MS
+        lastRef.current = { code, seenAt: now }
+        if (repeated) return
+        playBeep()
+        onScanRef.current(code)
       }
 
       const loop = () => {
@@ -223,6 +236,7 @@ export function useCameraScanner(onScan: (code: string) => void) {
         timerRef.current = window.setTimeout(loop, SCAN_INTERVAL_MS)
       }
 
+      if (session !== sessionRef.current) return
       activeRef.current = true
       setState('scanning')
       loop()

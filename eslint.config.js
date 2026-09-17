@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', '.local', 'supabase/.temp'] },
+  { ignores: ['dist', 'node_modules', '.local', 'supabase/.temp', '.claude', 'backups'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

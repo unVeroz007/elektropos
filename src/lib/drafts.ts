@@ -1,23 +1,31 @@
 import Dexie, { type Table } from 'dexie'
 
-export type DraftItem = {
-  product_unit_id: string
-  qty: string
-  discount_mode?: 'percent' | 'amount'
-  discount_value?: string
-}
+/**
+ * Draf transaksi lokal (FR-POS-01, FR-RES-01).
+ *
+ * - Dipisah per akun dan perangkat; akun lain di browser yang sama tidak melihatnya.
+ * - Maksimal 5 draf aktif per akun+perangkat. Draf tertua TIDAK dihapus diam-diam.
+ * - Draf tidak mereservasi stok. Isi keranjang disimpan apa adanya beserta
+ *   `operation_id` pengiriman terakhir agar hasil yang belum diketahui dapat dicek ulang.
+ */
 
-export type Draft = {
+export const DRAFT_SCHEMA_VERSION = 2
+export const MAX_ACTIVE_DRAFTS = 5
+
+export type DraftStatus = 'draft' | 'sending' | 'unknown' | 'failed'
+
+export type Draft<TContent = unknown> = {
   id?: number
+  schema_version: number
   user_id: string
   device_id: string
   label: string
+  content: TContent
+  status: DraftStatus
+  /** operation_id pengiriman terakhir; dipakai ulang saat hasil belum diketahui. */
+  operation_id?: string
   created_at: string
   updated_at: string
-  cart: DraftItem[]
-  payment_method: string
-  customer_id?: string
-  status: 'draft' | 'pending' | 'unknown'
 }
 
 class DraftDatabase extends Dexie {
@@ -25,75 +33,88 @@ class DraftDatabase extends Dexie {
 
   constructor() {
     super('elektropos-drafts')
-    this.version(1).stores({
-      drafts: '++id, user_id, device_id, updated_at'
-    })
+    this.version(1).stores({ drafts: '++id, user_id, device_id, updated_at' })
+    // Versi 2: skema draf baru. Draf versi lama tidak kompatibel (format keranjang berubah) dan dibuang.
+    this.version(2)
+      .stores({ drafts: '++id, [user_id+device_id], updated_at' })
+      .upgrade(tx => tx.table('drafts').clear())
   }
 }
 
 const db = new DraftDatabase()
 
-export async function saveDraft(
-  userId: string,
-  deviceId: string,
-  draft: Omit<Draft, 'id' | 'user_id' | 'device_id'>
-): Promise<number> {
-  try {
-    const existing = await db.drafts
-      .where('user_id')
-      .equals(userId)
-      .and(d => d.device_id === deviceId)
-      .first()
+export class DraftStorageError extends Error {}
 
-    if (existing?.id) {
-      await db.drafts.update(existing.id, {
-        ...draft,
-        updated_at: new Date().toISOString(),
-        status: draft.status || 'draft'
-      })
-      return existing.id
-    } else {
-      return await db.drafts.add({
-        ...draft,
-        user_id: userId,
-        device_id: deviceId,
-        updated_at: new Date().toISOString()
-      } as Draft)
-    }
+function storageError(err: unknown): DraftStorageError {
+  const name = err instanceof Error ? err.name : ''
+  const message = err instanceof Error ? err.message : String(err)
+  if (name === 'QuotaExceededError' || /quota/i.test(message)) {
+    return new DraftStorageError('Penyimpanan perangkat penuh. Hapus draf lama lalu coba lagi.')
+  }
+  return new DraftStorageError('Draf tidak dapat disimpan di perangkat ini.')
+}
+
+export async function listDrafts<T>(userId: string, deviceId: string): Promise<Draft<T>[]> {
+  try {
+    const rows = await db.drafts.where('[user_id+device_id]').equals([userId, deviceId]).toArray()
+    return (rows as Draft<T>[])
+      .filter(d => d.schema_version === DRAFT_SCHEMA_VERSION)
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    if (msg.includes('QuotaExceededError') || msg.includes('quota') || msg.includes('exceeded') || msg.includes('full')) {
-      throw new Error('Penyimpanan perangkat penuh. Hapus beberapa draf lama untuk membebaskan ruang.')
-    }
-    throw new Error('Gagal menyimpan draf ke perangkat.')
+    throw storageError(err)
   }
 }
 
-export async function loadDrafts(userId: string, deviceId: string): Promise<Draft[]> {
+type DraftInput<T> = Pick<Draft<T>, 'label' | 'content' | 'status' | 'operation_id'>
+
+/** Simpan draf baru atau perbarui draf `id`. Menolak draf ke-6 alih-alih menghapus yang lama. */
+export async function saveDraft<T>(userId: string, deviceId: string, input: DraftInput<T>, id?: number): Promise<number> {
+  const now = new Date().toISOString()
   try {
-    return await db.drafts
-      .where('user_id')
-      .equals(userId)
-      .and(d => d.device_id === deviceId)
-      .reverse()
-      .sortBy('updated_at')
-  } catch {
-    return []
+    if (id !== undefined) {
+      const existing = await db.drafts.get(id)
+      if (existing && existing.user_id === userId && existing.device_id === deviceId) {
+        await db.drafts.update(id, { ...input, updated_at: now })
+        return id
+      }
+    }
+    const count = await db.drafts.where('[user_id+device_id]').equals([userId, deviceId]).count()
+    if (count >= MAX_ACTIVE_DRAFTS) {
+      throw new DraftStorageError(`Sudah ada ${MAX_ACTIVE_DRAFTS} transaksi ditahan. Lanjutkan atau hapus salah satu dulu.`)
+    }
+    return await db.drafts.add({
+      ...input,
+      schema_version: DRAFT_SCHEMA_VERSION,
+      user_id: userId,
+      device_id: deviceId,
+      created_at: now,
+      updated_at: now,
+    })
+  } catch (err) {
+    throw err instanceof DraftStorageError ? err : storageError(err)
   }
 }
 
-export async function deleteDraft(id: number): Promise<void> {
-  await db.drafts.delete(id)
+export async function deleteDraft(userId: string, id: number): Promise<void> {
+  try {
+    const existing = await db.drafts.get(id)
+    if (existing?.user_id === userId) await db.drafts.delete(id)
+  } catch (err) {
+    throw storageError(err)
+  }
 }
 
-export async function clearUserDrafts(userId: string): Promise<void> {
-  await db.drafts.where('user_id').equals(userId).delete()
-}
+const DEVICE_KEY = 'elektropos-device-id'
 
 export function getDeviceId(): string {
-  const stored = localStorage.getItem('elektropos-device-id')
-  if (stored) return stored
-  const newId = crypto.randomUUID()
-  localStorage.setItem('elektropos-device-id', newId)
-  return newId
+  try {
+    const stored = localStorage.getItem(DEVICE_KEY)
+    if (stored) return stored
+    const created = crypto.randomUUID()
+    localStorage.setItem(DEVICE_KEY, created)
+    return created
+  } catch {
+    // Penyimpanan diblokir (mode privat): draf tetap bekerja selama tab terbuka.
+    return 'ephemeral-device'
+  }
 }

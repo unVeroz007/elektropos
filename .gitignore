@@ -9,3 +9,4 @@ backups/
 supabase/.branches/
 supabase/.profiles/
 supabase/.temp/
+.claude/worktrees/
