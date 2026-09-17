@@ -1,6 +1,6 @@
 # 10 — Keterlacakan Fitur ke Aturan dan Bukti
 
-Baseline 1.1. Semua baris berstatus **NOT_IMPLEMENTED / NOT_RUN** sampai ada implementasi dan laporan uji aktual. Nomor AT merupakan definisi pada [pengujian](07-TEST-ACCEPTANCE.md), bukan hasil lulus.
+Baseline 1.1. Tabel pemetaan di bawah adalah kontrak: setiap FR harus punya kasus penerimaan. Status bukti aktual dicatat pada bagian **Status bukti** di akhir dokumen; nomor AT tetap merujuk definisi pada [pengujian](07-TEST-ACCEPTANCE.md).
 
 | Fitur PRD | Pemilik aturan/kontrak | Kasus penerimaan | Tahap |
 |---|---|---|---|
@@ -32,3 +32,49 @@ Baseline 1.1. Semua baris berstatus **NOT_IMPLEMENTED / NOT_RUN** sampai ada imp
 NFR-01/02/03/04/08 diperiksa AT-30 dan beban konkurensi AT-11. NFR-05/10 diperiksa seluruh kasus money/stock. NFR-06/07 melalui AT-12/30. NFR-09 melalui AT-29/30.
 
 Saat menambah FR, tambahkan definisi PRD, scope, aturan/API/data bila terkait, kasus AT dengan expected result, dan baris di tabel ini. Pemeriksa dokumen akan menolak FR tanpa pemetaan atau AT yang tidak dikenal.
+
+## Status bukti aktual
+
+Per 16 September 2026, implementasi berikut telah diuji dan PASS pada database PostgreSQL lokal (27 AT).
+
+### P0 — Bootstrap & autentikasi
+- AT-01: owner login multi-perangkat, akun nonaktif ditolak, anon ditolak
+- AT-02: staff/maintainer ditolak write bisnis & baca modal via RPC langsung
+
+### P1 — Mesin hitung & persediaan
+- AT-03: barcode fisik terdaftar, duplikat ditolak, satuan presisi
+- AT-04: satuan meter dengan konversi dan harga per unit
+- AT-05: presisi 0.1 m × 10 kali sisa tepat 0, lot modal habis; qty 4 desimal ditolak
+- AT-06: roll segel 100m terverifikasi; sisa potongan tidak dianggap roll utuh
+- AT-11: INSUFFICIENT_STOCK saat stok habis
+- AT-14: lot/posisi/movement invariant terpenuhi
+- AT-15: stok awal idempoten (key sama = 1x posting); OPENING tidak membuat purchase payment
+- AT-16: transfer SHOP→FIELD, disposal, versi konflik ditolak
+
+### P2 — Kasir & pembayaran
+- AT-07: diskon baris + diskon nota (BR-04 largest-remainder); sum alokasi = total
+- AT-08: PRICE_CHANGED saat versi satuan berubah, katalog dimuat ulang
+- AT-09: finalisasi tunai atomik, kembalian benar
+- AT-10: idempotensi operation_id (key+hash sama = 1 nota)
+- AT-13: retur parsial refund, stok/modal kembali sesuai alokasi asal
+- AT-24: kas laci sesuai BR-12, sesi buka/tutup, variance
+- AT-25: tutup kas + koreksi metode pembayaran
+
+### P3 — Servis
+- AT-17: tiket toko/onsite, custody, kontak wajib
+- AT-18: transisi status WF-05, estimasi PROPOSED→APPROVED, WORKING
+- AT-19: USE + REVERSE part, cost allocation tercatat
+- AT-20: DP, pelunasan, status UNPRICED/PAID
+- AT-21: refund_due 20rb, refund melebihi ditolak (BR-10)
+- AT-22: handover dengan nama penerima, closed_at atomik
+- AT-23: tiket keluhan kembali, tiket asal tidak berubah
+
+### P4 — Pengaturan & data
+- AT-03 tambahan: find_by_barcode satuan tepat, daftar/hapus barcode, idempoten
+- AT-26: laporan periode, staff tidak terima COGS
+- AT-27: CSV aman formula (prefix `'`), foto validasi mime/size, anon ditolak
+- AT-29: pengaturan toko checklist, validasi lebar struk, health per peran, backup manifest
+- AT-28: offline deteksi, draft quota handling
+
+### Verifikasi API (npm run verify:flows)
+22 alur via REST API: beranda, katalog, scan barcode, daftar barcode, sesi kas, jual, struk, riwayat, laporan, COGS tersembunyi, servis/tiket/transisi, pelanggan, pengaturan, kesehatan, keamanan anon.

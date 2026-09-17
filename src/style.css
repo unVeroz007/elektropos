@@ -247,6 +247,21 @@ textarea:focus{outline:2px solid #62b892;border-color:transparent}
 .scanner-mega-hint span{font-size:14px;color:#7a6a3a}
 .scanner-panel .scanner-input{margin-top:12px}
 
+/* Foto tiket servis */
+.ticket-photos{margin-top:16px;padding-top:14px;border-top:1px solid #dfe8df}
+.ticket-photos-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.ticket-photos-head h4{margin:0;font-size:15px}
+.photo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
+.photo-thumb{display:block;border-radius:8px;overflow:hidden;border:1px solid #dfe8df;aspect-ratio:1;background:#f0f5f1;display:flex;align-items:center;justify-content:center}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.photo-loading{font-size:11px;color:#819187}
+
+/* Offline banner */
+.offline-banner{background:#ffe9e4;color:#8e3220;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;font-size:14px;border:1px solid #e0b8b0}
+
+/* Ekspor CSV */
+.report-export{margin-top:16px}
+
 /* Barcode belum terdaftar di kasir */
 .unknown-barcode{background:#fff8e8;border:2px solid #f1bb4e;border-radius:12px;padding:16px;margin-bottom:16px;display:grid;gap:12px}
 .unknown-barcode-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}

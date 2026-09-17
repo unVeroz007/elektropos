@@ -33,37 +33,53 @@ class DraftDatabase extends Dexie {
 
 const db = new DraftDatabase()
 
-export async function saveDraft(userId: string, deviceId: string, draft: Omit<Draft, 'id' | 'user_id' | 'device_id'>): Promise<number> {
-  const existing = await db.drafts
-    .where('user_id')
-    .equals(userId)
-    .and(d => d.device_id === deviceId)
-    .first()
+export async function saveDraft(
+  userId: string,
+  deviceId: string,
+  draft: Omit<Draft, 'id' | 'user_id' | 'device_id'>
+): Promise<number> {
+  try {
+    const existing = await db.drafts
+      .where('user_id')
+      .equals(userId)
+      .and(d => d.device_id === deviceId)
+      .first()
 
-  if (existing?.id) {
-    await db.drafts.update(existing.id, {
-      ...draft,
-      updated_at: new Date().toISOString(),
-      status: draft.status || 'draft'
-    })
-    return existing.id
-  } else {
-    return await db.drafts.add({
-      ...draft,
-      user_id: userId,
-      device_id: deviceId,
-      updated_at: new Date().toISOString()
-    } as Draft)
+    if (existing?.id) {
+      await db.drafts.update(existing.id, {
+        ...draft,
+        updated_at: new Date().toISOString(),
+        status: draft.status || 'draft'
+      })
+      return existing.id
+    } else {
+      return await db.drafts.add({
+        ...draft,
+        user_id: userId,
+        device_id: deviceId,
+        updated_at: new Date().toISOString()
+      } as Draft)
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('QuotaExceededError') || msg.includes('quota') || msg.includes('exceeded') || msg.includes('full')) {
+      throw new Error('Penyimpanan perangkat penuh. Hapus beberapa draf lama untuk membebaskan ruang.')
+    }
+    throw new Error('Gagal menyimpan draf ke perangkat.')
   }
 }
 
 export async function loadDrafts(userId: string, deviceId: string): Promise<Draft[]> {
-  return await db.drafts
-    .where('user_id')
-    .equals(userId)
-    .and(d => d.device_id === deviceId)
-    .reverse()
-    .sortBy('updated_at')
+  try {
+    return await db.drafts
+      .where('user_id')
+      .equals(userId)
+      .and(d => d.device_id === deviceId)
+      .reverse()
+      .sortBy('updated_at')
+  } catch {
+    return []
+  }
 }
 
 export async function deleteDraft(id: number): Promise<void> {

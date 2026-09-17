@@ -106,6 +106,28 @@ export function Reports() {
         <div className="report-row"><span>Refund</span><span className="neg">Rp{Number(data.refunds).toLocaleString('id-ID')}</span></div>
         {data.cogs && <div className="report-row total"><span>COGS</span><span>Rp{Number(data.cogs).toLocaleString('id-ID')}</span></div>}
       </div>
+
+      <div className="report-export">
+        <button onClick={async () => {
+          if (!supabase) return
+          const { data: res } = await supabase.rpc('export_csv_v1', {
+            p_input: { dataset: 'invoices', start_date: start, end_date: end, limit: 1000 },
+          })
+          if (res?.rows && Array.isArray(res.rows) && res.rows.length > 0) {
+            const headers = Object.keys(res.rows[0]).join(',')
+            const csv = [headers, ...res.rows.map((r: Record<string, string>) =>
+              Object.values(r).map(v => String(v)).join(',')
+            )].join('\n')
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `elektropos-laporan-${start}-${end}.csv`
+            a.click()
+            URL.revokeObjectURL(url)
+          }
+        }}>Ekspor CSV</button>
+      </div>
     </section>
   )
 }

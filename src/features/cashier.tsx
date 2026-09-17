@@ -5,6 +5,7 @@ import { parseQuantity, rupiahHalfUp, toBaseQuantity } from '../lib/numbers'
 import { saveDraft, loadDrafts, deleteDraft, getDeviceId, type Draft } from '../lib/drafts'
 import Decimal from 'decimal.js'
 import { BarcodeScanner } from './scanner'
+import { useOnlineStatus } from '../lib/online'
 
 type Profile = { id: string; display_name: string; role: 'OWNER' | 'STAFF' | 'MAINTAINER'; active: boolean }
 type Product = {
@@ -61,6 +62,7 @@ export function Cashier({ profile }: { profile: Profile }) {
   const [linkQuery, setLinkQuery] = useState('')
   const [linkProducts, setLinkProducts] = useState<Product[]>([])
   const [linking, setLinking] = useState(false)
+  const isOnline = useOnlineStatus()
 
   const loadProducts = useCallback(async () => {
     if (!supabase) return
@@ -228,6 +230,10 @@ export function Cashier({ profile }: { profile: Profile }) {
   }
 
   async function finalize() {
+    if (!isOnline) {
+      setError('Internet sedang terputus. Pembayaran tidak dapat dilakukan tanpa koneksi.')
+      return
+    }
     const err = validateCart()
     if (err) { setError(err); return }
 
@@ -361,6 +367,12 @@ export function Cashier({ profile }: { profile: Profile }) {
           <button className="ghost" onClick={() => { setCart([]); setError(''); setCurrentDraftId(null) }}>Reset</button>
         </div>
       </div>
+
+      {!isOnline && (
+        <div className="offline-banner">
+          ⚡ Internet terputus — data lokal tersimpan, pembayaran tidak bisa dilakukan sampai koneksi pulih.
+        </div>
+      )}
 
       {drafts.length > 0 && (
         <div className="drafts-panel">

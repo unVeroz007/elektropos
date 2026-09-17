@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useQuery } from '@tanstack/react-query'
+import { TicketPhotos } from './photos'
 
 type Ticket = { id: string; number: string; equipment_type: string; complaint: string; work_status: string; service_location: string; custody_location: string; created_at: string }
 type TicketDetail = Ticket & {
@@ -184,6 +185,8 @@ function TicketDetail({ ticket, onClose, onRefresh }: { ticket: TicketDetail; on
             ))}
           </div>
         )}
+
+        <TicketPhotos ticketId={ticket.id} />
       </div>
     </div>
   )
