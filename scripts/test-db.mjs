@@ -1,128 +1,98 @@
+#!/usr/bin/env node
+/**
+ * Uji penerimaan database ElektroPOS pada DATABASE UJI TERISOLASI.
+ *
+ * Runner ini TIDAK PERNAH menyentuh database aplikasi (`postgres`) dan tidak
+ * menjalankan `supabase db reset`. Ia membuat database baru di cluster yang sama,
+ * menerapkan bootstrap + seluruh migrasi + fixture, lalu menjalankan setiap berkas
+ * supabase/tests/*.sql. Database uji dihapus lalu dibuat ulang setiap kali jalan.
+ *
+ * Lingkungan:
+ *   TEST_ADMIN_URL  koneksi admin cluster (default Supabase lokal, db `postgres`)
+ *   TEST_DB_NAME    nama database uji (default `elektropos_test`; wajib diawali `elektropos_test`)
+ *   TEST_KEEP_DB    `yes` agar database uji tidak dihapus setelah selesai
+ *
+ * Argumen opsional: pola nama berkas uji, mis. `node scripts/test-db.mjs sales`
+ */
 import { execFileSync } from 'child_process'
+import { readdirSync } from 'fs'
 import { join, resolve } from 'path'
 import { fileURLToPath } from 'url'
 
-const __dirname = resolve(fileURLToPath(import.meta.url), '..')
-const root = join(__dirname, '..')
-// Default hanya untuk Supabase lokal. Set TEST_DB_URL untuk target lain.
-const DB_URL = process.env.TEST_DB_URL || 'postgresql://postgres:postgres@127.0.0.1:54500/postgres'
+const root = join(resolve(fileURLToPath(import.meta.url), '..'), '..')
+const ADMIN_URL = process.env.TEST_ADMIN_URL || 'postgresql://postgres:postgres@127.0.0.1:54500/postgres'
+const DB_NAME = process.env.TEST_DB_NAME || 'elektropos_test'
+const KEEP = process.env.TEST_KEEP_DB === 'yes'
+const filter = process.argv[2] ?? ''
 
-function psqlFile(path) {
+if (!/^elektropos_test[a-z0-9_]*$/.test(DB_NAME)) {
+  console.error(`TEST_DB_NAME harus diawali "elektropos_test" (huruf kecil/angka/_). Ditolak: ${DB_NAME}`)
+  process.exit(2)
+}
+
+const adminUrl = new URL(ADMIN_URL)
+const testUrl = new URL(ADMIN_URL)
+testUrl.pathname = `/${DB_NAME}`
+
+function psql(url, args) {
   try {
-    execFileSync('cmd', ['/c', 'psql', DB_URL, '-v', 'ON_ERROR_STOP=1', '-q', '-f', path], {
+    return execFileSync('psql', [url.toString(), '-X', '-q', '-v', 'ON_ERROR_STOP=1', ...args], {
       encoding: 'utf8',
       stdio: ['pipe', 'pipe', 'pipe'],
     })
   } catch (err) {
     const detail = `${err.stderr ?? ''}${err.stdout ?? ''}`.trim()
-    throw new Error(`Failed to run ${path}:\n${detail}`)
+    throw new Error(detail || err.message)
   }
 }
 
-const pass = (label) => console.log(`  PASS  ${label}`)
-const fail = (label, detail) => {
-  console.error(`  FAIL  ${label}`)
-  if (detail) console.error(detail.split('\n').filter(l => l.trim()).slice(0, 5).join('\n'))
-  process.exitCode = 1
+const sqlFiles = dir => readdirSync(dir).filter(f => f.endsWith('.sql')).sort()
+
+function recreateDatabase() {
+  psql(adminUrl, ['-c', `drop database if exists ${DB_NAME} with (force)`])
+  psql(adminUrl, ['-c', `create database ${DB_NAME}`])
+  psql(testUrl, ['-f', join(root, 'supabase', 'local-test', 'bootstrap.sql')])
+  for (const file of sqlFiles(join(root, 'supabase', 'migrations'))) {
+    try {
+      psql(testUrl, ['-f', join(root, 'supabase', 'migrations', file)])
+    } catch (err) {
+      throw new Error(`Migrasi ${file} gagal:\n${err.message}`)
+    }
+  }
+  psql(testUrl, ['-f', join(root, 'supabase', 'seed.sql')])
 }
 
-console.log('ElektroPOS — uji database P0-P3')
-console.log(`Database : ${DB_URL}`)
+console.log('ElektroPOS — uji database terisolasi')
+console.log(`Database uji : ${DB_NAME} (database aplikasi tidak disentuh)`)
 console.log('')
 
-// Setup: reset via supabase CLI (handles migrations + seed properly)
-console.log('[setup] supabase db reset')
+let failed = 0
 try {
-  execFileSync('cmd', ['/c', 'npx supabase db reset'], {
-    encoding: 'utf8', cwd: root, stdio: ['pipe', 'pipe', 'pipe'],
-  })
+  console.log('[setup] buat database uji + bootstrap + migrasi + fixture')
+  recreateDatabase()
   console.log('  OK')
 } catch (err) {
-  console.error('  FAIL:', (err.stderr || err.stdout || err.message || '').slice(0, 500))
+  console.error('  FAIL')
+  console.error(err.message.split('\n').slice(0, 12).join('\n'))
   process.exit(1)
 }
 
+const tests = sqlFiles(join(root, 'supabase', 'tests')).filter(f => f.includes(filter))
 console.log('')
-console.log('[P0] AT-01/02 — autentikasi & akses')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p0_auth_access.sql'))
-  pass('AT-01 owner aktif, akun nonaktif ditolak, anon ditolak')
-  pass('AT-02 staff/maintainer ditolak write bisnis & baca modal')
-} catch (err) { fail('P0', err.message) }
-
-console.log('')
-console.log('[P1] AT-15/16 — stok awal, idempotensi, transfer')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p1_stock.sql'))
-  pass('AT-15 stok awal + idempotensi, AT-16 transfer + kerusakan')
-} catch (err) { fail('P1', err.message) }
-
-console.log('')
-console.log('[P2] AT-07/09/10/13/24/25 — kasir, diskon, retur, kas')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p2_cashier.sql'))
-  pass('AT-09/10 sale tunai + idempoten, AT-07 diskon, AT-13 retur, AT-24/25 kas')
-} catch (err) { fail('P2', err.message) }
-
-console.log('')
-console.log('[P1+P2] AT-05/06/11/14 — presisi, roll, FIFO, stok habis')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p1_p2_extra.sql'))
-  pass('AT-05 presisi 0.1m x10, AT-06 roll sealed, AT-11 stok habis, AT-14 invariant')
-} catch (err) { fail('P1+P2 extra', err.message) }
-
-console.log('')
-console.log('[P3] AT-17/18/19/20/22/23 — servis, estimasi, part, handover')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p3_service.sql'))
-  pass('AT-17 tiket, AT-18 transisi, AT-19 part, AT-20 DP, AT-22 handover, AT-23 kembali')
-} catch (err) { fail('P3', err.message) }
-
-console.log('')
-console.log('[P4] AT-03/04/21/26/27 — barcode, satuan, laporan, CSV, lampiran')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p4_extra.sql'))
-  pass('AT-03 barcode/SKU arsip, AT-04 satuan, AT-26 laporan peran, AT-27 CSV+attach')
-} catch (err) { fail('P4', err.message) }
-
-console.log('')
-console.log('[P4] AT-21 — DP berlebih dan refund servis')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p4_at21.sql'))
-  pass('AT-21 DP 100rb, tagihan 80rb, refund_due 20rb, refund ditolak berlebih')
-} catch (err) { fail('AT-21', err.message) }
-
-console.log('')
-console.log('[P4] AT-29 — pengaturan toko, kesehatan, backup manifest')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p4_setup_health.sql'))
-  pass('AT-29 settings checklist, validasi lebar struk, health per peran')
-} catch (err) { fail('AT-29', err.message) }
-
-console.log('')
-console.log('[P4] AT-03 — daftar barcode fisik ke produk')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p4_barcode.sql'))
-  pass('AT-03 barcode fisik, duplikat ditolak, staff ditolak, unit lintas produk ditolak')
-} catch (err) { fail('AT-03 barcode', err.message) }
-
-console.log('')
-console.log('[P1+P2] AT-06 — roll kontinu, sisa potongan, retur posisi baru')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p1_at06.sql'))
-  pass('AT-06 6m+4m jual 10m, retur buat posisi baru')
-} catch (err) { fail('AT-06', err.message) }
-
-console.log('')
-console.log('[P2] AT-08 — harga berubah (PRICE_CHANGED)')
-try {
-  psqlFile(join(root, 'supabase', 'tests', 'p2_price_changed.sql'))
-  pass('AT-08 versi satuan lama ditolak, versi terbaru diterima')
-} catch (err) { fail('AT-08', err.message) }
-
-console.log('')
-if (process.exitCode) {
-  console.error('HASIL: FAIL')
-} else {
-  console.log('HASIL: PASS')
+for (const file of tests) {
+  try {
+    psql(testUrl, ['-f', join(root, 'supabase', 'tests', file)])
+    console.log(`  PASS  ${file}`)
+  } catch (err) {
+    failed++
+    console.error(`  FAIL  ${file}`)
+    console.error(err.message.split('\n').filter(l => l.trim()).slice(0, 8).map(l => `        ${l}`).join('\n'))
+  }
 }
+
+if (!KEEP) psql(adminUrl, ['-c', `drop database if exists ${DB_NAME} with (force)`])
+
+console.log('')
+console.log(`${tests.length - failed}/${tests.length} berkas uji lulus`)
+console.log(failed ? 'HASIL: FAIL' : 'HASIL: PASS')
+process.exit(failed ? 1 : 0)
