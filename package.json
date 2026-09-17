@@ -12,7 +12,7 @@
     "test:db": "node scripts/test-db.mjs",
     "setup:demo": "node --env-file=.env scripts/setup-demo.mjs",
     "backup": "node --env-file=.env scripts/backup.mjs",
-    "restore": "node scripts/restore.mjs",
+    "restore": "node --env-file=.env scripts/restore.mjs",
     "verify:flows": "node --env-file=.env scripts/verify-flows.mjs"
   },
   "dependencies": {

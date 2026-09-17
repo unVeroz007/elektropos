@@ -66,6 +66,41 @@ Retensi default cadangan: 7 harian +4 mingguan dengan manifest/deduplikasi objek
 
 Jadwalkan drill sebelum go-live, setelah perubahan format backup penting, dan minimal bulanan selama awal operasi. Penjadwalan aktual dilakukan pada task implementasi/operasional, bukan dibuat oleh dokumen ini.
 
+## OPS-04A — Runbook backup/restore Supabase lokal (D4)
+
+Implementasi: `scripts/backup.mjs`, `scripts/restore.mjs`; kontrak rinci di [kontrak stok-laporan-foto](audit/kontrak-stok-laporan-foto.md).
+
+**Isi backup** (`BACKUP_DIR/<YYYYMMDDTHHMMSSZ>/`): `app.dump` (schema private/public/storage_access: tabel, fungsi, grants, data), `platform-schema.dump` (DDL auth/storage/riwayat migrasi), `platform-data.dump` (akun auth, bucket/objek Storage, riwayat migrasi), `photos/` (isi foto via Storage API), `manifest.json` (hash, jumlah baris, jumlah RPC, daftar foto; tanpa rahasia), `backup-status.json`. Semua dump dan hitungan diambil dari satu snapshot. Status dicatat ke `private.backup_runs` (tampil di Beranda/Kesehatan) dan `backup-log.jsonl` lokal.
+
+**`.env` PC toko** (jangan di-commit): `BACKUP_DB_URL=postgresql://postgres:<pw>@127.0.0.1:54500/postgres`, `BACKUP_DIR=D:\ElektroPOS\backups`, `BACKUP_MIRROR_DIR=E:\ElektroPOS-backup` (disk eksternal/folder sinkron; bila diset dan salin gagal, backup FAILED), `BACKUP_RETENTION=14`, `VITE_SUPABASE_URL`, `SUPABASE_SECRET_KEY`.
+
+**Jadwal Windows Task Scheduler** (harian + setelah tutup toko):
+
+```powershell
+$action  = New-ScheduledTaskAction -Execute "C:\Program Files\nodejs\node.exe" `
+  -Argument "--env-file=.env scripts\backup.mjs" -WorkingDirectory "D:\Papa\elektropos"
+$daily   = New-ScheduledTaskTrigger -Daily -At 21:30
+$logon   = New-ScheduledTaskTrigger -AtLogOn   # catch-up bila PC mati saat jadwal
+$setting = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+Register-ScheduledTask -TaskName "ElektroPOS Backup" -Action $action -Trigger $daily,$logon -Settings $setting
+```
+
+Pastikan `pg_dump`/`psql` (PostgreSQL 17) ada di PATH akun penjadwal dan Supabase lokal sudah berjalan. Periksa tiap pagi: Beranda menampilkan `backup.stale=false`; bila FAILED baca `backup-log.jsonl` (pesan sudah disensor).
+
+**Uji restore berkala** (sebelum go-live, bulanan, dan setelah perubahan format): target selalu database terpisah yang kosong.
+
+```powershell
+psql "postgresql://postgres:<pw>@127.0.0.1:54500/postgres" -c "create database elektropos_test_restore"
+$env:RESTORE_DB_URL="postgresql://postgres:<pw>@127.0.0.1:54500/elektropos_test_restore"
+$env:RESTORE_RECORD_URL=$env:BACKUP_DB_URL   # opsional: catat restore_verified_at bila SUCCEEDED
+npm run restore
+psql "postgresql://postgres:<pw>@127.0.0.1:54500/postgres" -c "drop database elektropos_test_restore with (force)"
+```
+
+SUCCEEDED hanya bila jumlah baris seluruh tabel manifest, jumlah RPC `*_v1`, foto (hash + baris objek), invariant stok/modal, dan panggilan RPC sebagai OWNER cocok. Laporan: `restore-report-<db>.json` di folder backup. Lanjutkan cek manual OPS-04 butir 5–6.
+
+**Pemulihan PC baru** (data hilang/PC rusak): hentikan pemakaian aplikasi; salin folder backup terakhir dari disk cermin; `npx supabase start` dengan `[db.migrations] enabled = false` sementara di `supabase/config.toml` agar database `postgres` kosong dari schema aplikasi; lalu `RESTORE_ALLOW_APP_DB=yes RESTORE_PHOTOS=api RESTORE_DB_URL=<url postgres> npm run restore` dan ketik ulang nama database saat diminta. Script menolak target yang sudah berisi schema `private` dan tidak pernah melakukan drop. Setelah SUCCEEDED kembalikan `enabled = true`, uji login/foto via aplikasi, dan rekonsiliasi transaksi setelah waktu snapshot bersama owner. Langkah ini belum diuji pada instance Supabase kedua (hanya ke database uji di cluster yang sama).
+
 ## OPS-05 — Kapasitas dan performa
 
 Pantau database termasuk tabel/index, Storage, egress, latensi/error RPC, waktu backup dan pertumbuhan harian. Pisahkan ukuran penyimpanan dengan RAM/CPU server. Kapasitas package dikonfirmasi di dashboard/provider sebelum deployment.
