@@ -10,6 +10,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:db": "node scripts/test-db.mjs",
+    "test:db:cash-concurrency": "node scripts/test-cash-concurrency.mjs",
     "setup:demo": "node --env-file=.env scripts/setup-demo.mjs",
     "backup": "node --env-file=.env scripts/backup.mjs",
     "restore": "node scripts/restore.mjs",
