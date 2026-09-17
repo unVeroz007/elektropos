@@ -363,8 +363,11 @@ export function Cashier({ profile }: { profile: Profile }) {
           <p>Cari produk (scan barcode), tambah keranjang, bayar.</p>
         </div>
         <div className="section-actions">
-          <button className="ghost" onClick={saveDraftAction} disabled={cart.length === 0}>Simpan Draft</button>
-          <button className="ghost" onClick={() => { setCart([]); setError(''); setCurrentDraftId(null) }}>Reset</button>
+          <button className="ghost" onClick={saveDraftAction} disabled={cart.length === 0}>Tahan Dulu</button>
+          <button className="ghost" onClick={() => {
+            if (cart.length > 0 && !confirm('Kosongkan keranjang? Semua barang yang sudah dimasukkan akan hilang.')) return
+            setCart([]); setError(''); setCurrentDraftId(null)
+          }}>Kosongkan</button>
         </div>
       </div>
 

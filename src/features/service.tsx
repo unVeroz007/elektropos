@@ -13,9 +13,25 @@ type TicketDetail = Ticket & {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  NEW: 'Baru', INSPECTING: 'Inspeksi', AWAITING_APPROVAL: 'Menunggu Persetujuan',
-  WORKING: 'Dikerjakan', READY: 'Siap', DIAMBIL: 'Diambil',
-  ONSITE_DONE: 'Selesai Onsite', UNREPAIRABLE: 'Tidak Diperbaiki', CANCELLED: 'Dibatalkan'
+  NEW: 'Baru', INSPECTING: 'Diperiksa', AWAITING_APPROVAL: 'Menunggu Persetujuan',
+  WORKING: 'Dikerjakan', READY: 'Siap', DIAMBIL: 'Sudah Diambil',
+  ONSITE_DONE: 'Selesai di Rumah', UNREPAIRABLE: 'Tidak Bisa Diperbaiki', CANCELLED: 'Dibatalkan'
+}
+
+const CUSTODY_LABEL: Record<string, string> = {
+  SHOP: 'Ada di toko',
+  FIELD_FATHER: 'Dibawa ayah',
+  FATHER: 'Dibawa ayah',
+  CUSTOMER: 'Di pelanggan'
+}
+
+const TRANSITION_LABEL: Record<string, string> = {
+  INSPECTING: 'Mulai Periksa',
+  AWAITING_APPROVAL: 'Minta Persetujuan',
+  WORKING: 'Mulai Kerjakan',
+  READY: 'Selesai Dikerjakan',
+  UNREPAIRABLE: 'Tidak Bisa Diperbaiki',
+  CANCELLED: 'Batalkan'
 }
 
 export function ServiceTickets() {
@@ -157,8 +173,8 @@ function TicketDetail({ ticket, onClose, onRefresh }: { ticket: TicketDetail; on
           <span className={`status-badge ${ticket.work_status.toLowerCase()}`}>
             {STATUS_LABEL[ticket.work_status]}
           </span>
-          <span>{ticket.service_location === 'ONSITE' ? 'Kunjungan' : 'Toko'}</span>
-          <span>Custody: {ticket.custody_location}</span>
+          <span>{ticket.service_location === 'ONSITE' ? 'Kunjungan rumah' : 'Di toko'}</span>
+          <span>{CUSTODY_LABEL[ticket.custody_location] || ticket.custody_location}</span>
         </div>
 
         {transitions[ticket.work_status] && (
@@ -166,7 +182,7 @@ function TicketDetail({ ticket, onClose, onRefresh }: { ticket: TicketDetail; on
             {transitions[ticket.work_status].map(s => (
               <button key={s} onClick={() => transition(s)} disabled={busy}
                 className={s === 'CANCELLED' || s === 'UNREPAIRABLE' ? 'ghost' : 'primary'}>
-                {STATUS_LABEL[s]}
+                {TRANSITION_LABEL[s] || STATUS_LABEL[s]}
               </button>
             ))}
           </div>

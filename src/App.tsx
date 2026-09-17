@@ -99,38 +99,92 @@ export default function App() {
   async function logout() { await supabase?.auth.signOut({ scope: 'local' }); setUser(null); setProfile(null) }
   if (loading) return <div className="loading">Menghubungkan ElektroPOS…</div>
   if (!user || !profile) return <>{error && <div className="floating-error">{error}</div>}<Login onLogin={() => { setLoading(true); supabase?.auth.getUser().then(() => { /* perubahan sesi diproses listener */ }) }} /></>
-  return <div className="app"><aside className="sidebar"><div className="brand"><span className="brand-icon">E</span><div><strong>ElektroPOS</strong><small>Operasional toko</small></div></div>      <nav>
-        <Link to="/beranda">Beranda</Link>
-        <Link to="/kasir">Kasir</Link>
-        <Link to="/servis">Servis</Link>
-        <Link to="/pelanggan">Pelanggan</Link>
-        <Link to="/riwayat">Riwayat</Link>
-        {profile.role === 'OWNER' && <Link to="/laporan">Laporan</Link>}
-        {(profile.role === 'OWNER' || profile.role === 'MAINTAINER') && <Link to="/kesehatan">Sistem</Link>}
-        {profile.role === 'OWNER' && <Link to="/pengaturan">Pengaturan</Link>}
-        <Link to="/katalog">Katalog</Link>
-        {profile.role === 'OWNER' && <Link to="/barang-masuk">Barang Masuk</Link>}
-        {profile.role === 'OWNER' && <Link to="/barcode">Daftar Barcode</Link>}
-        {profile.role === 'OWNER' && <Link to="/kas">Kas Laci</Link>}
-      </nav>
-<div className="sidebar-foot">Data aktual sesuai izin akun</div></aside><div className="main"><header><div><span className="online-dot" /> Terhubung sebagai <strong>{profile.display_name}</strong> <span className="role">{profile.role}</span></div><button className="ghost" onClick={logout}>Keluar</button></header><main>        <Suspense fallback={<div className="loading">Memuat halaman…</div>}>
-        <Routes>
-          <Route path="/beranda" element={<Dashboard />} />
-          <Route path="/kasir" element={<Cashier profile={profile} />} />
-          <Route path="/struk/:invoiceId" element={<Receipt />} />
-          <Route path="/servis" element={<ServiceTickets />} />
-          <Route path="/pelanggan" element={<Customers />} />
-          <Route path="/riwayat" element={<History />} />
-          <Route path="/laporan" element={profile.role === 'OWNER' || profile.role === 'MAINTAINER' ? <Reports /> : <Navigate to="/kasir" />} />
-          <Route path="/kesehatan" element={profile.role === 'OWNER' || profile.role === 'MAINTAINER' ? <Health /> : <Navigate to="/kasir" />} />
-          <Route path="/pengaturan" element={profile.role === 'OWNER' ? <Settings /> : <Navigate to="/kasir" />} />
-          <Route path="/barang-masuk" element={profile.role === 'OWNER' ? <StockIntake profile={profile} /> : <Navigate to="/kasir" />} />
-          <Route path="/barcode" element={profile.role === 'OWNER' ? <BarcodeManager /> : <Navigate to="/kasir" />} />
-          <Route path="/retur/:invoiceId" element={<ReturnSale profile={profile} />} />
-          <Route path="/kas" element={profile.role === 'OWNER' ? <CashSession /> : <Navigate to="/kasir" />} />
-          <Route path="/katalog" element={<Catalog profile={profile} />} />
-          <Route path="/produk/baru" element={profile.role === 'OWNER' ? <NewProduct /> : <Navigate to="/kasir" />} />
-          <Route path="*" element={<Navigate to="/beranda" />} />
-        </Routes>
-        </Suspense></main></div></div>
+
+  const isOwner = profile.role === 'OWNER'
+  const isStaff = profile.role === 'STAFF'
+  const isMaintainer = profile.role === 'MAINTAINER'
+  const home = isStaff ? '/kasir' : '/beranda'
+
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-icon">E</span>
+          <div><strong>ElektroPOS</strong><small>Operasional toko</small></div>
+        </div>
+
+        <nav>
+          <div className="nav-group">
+            <Link to="/beranda">Beranda</Link>
+            <Link to="/kasir">Kasir</Link>
+            <Link to="/riwayat">Riwayat Nota</Link>
+          </div>
+
+          <div className="nav-group">
+            <span className="nav-label">Servis</span>
+            <Link to="/servis">Tiket Servis</Link>
+            <Link to="/pelanggan">Pelanggan</Link>
+          </div>
+
+          <div className="nav-group">
+            <span className="nav-label">Persediaan</span>
+            <Link to="/katalog">Katalog</Link>
+            {isOwner && <Link to="/barang-masuk">Barang Masuk</Link>}
+            {isOwner && <Link to="/barcode">Daftar Barcode</Link>}
+          </div>
+
+          {isOwner && (
+            <div className="nav-group">
+              <span className="nav-label">Uang &amp; Laporan</span>
+              <Link to="/kas">Kas Laci</Link>
+              <Link to="/laporan">Laporan</Link>
+            </div>
+          )}
+
+          {(isOwner || isMaintainer) && (
+            <div className="nav-group">
+              <span className="nav-label">Pengaturan</span>
+              {isOwner && <Link to="/pengaturan">Identitas Toko</Link>}
+              <Link to="/kesehatan">Kesehatan Sistem</Link>
+            </div>
+          )}
+        </nav>
+
+        <div className="sidebar-foot">Data sesuai izin akun Anda</div>
+      </aside>
+
+      <div className="main">
+        <header>
+          <div className="who">
+            <span className="online-dot" />
+            Masuk sebagai <strong>{profile.display_name}</strong>
+            <span className="role">{profile.role === 'OWNER' ? 'Pemilik' : profile.role === 'STAFF' ? 'Karyawan' : 'Teknis'}</span>
+          </div>
+          <button className="ghost" onClick={logout}>Keluar</button>
+        </header>
+        <main>
+          <Suspense fallback={<div className="loading">Memuat halaman…</div>}>
+            <Routes>
+              <Route path="/beranda" element={<Dashboard />} />
+              <Route path="/kasir" element={<Cashier profile={profile} />} />
+              <Route path="/struk/:invoiceId" element={<Receipt />} />
+              <Route path="/servis" element={<ServiceTickets />} />
+              <Route path="/pelanggan" element={<Customers />} />
+              <Route path="/riwayat" element={<History />} />
+              <Route path="/laporan" element={isOwner || isMaintainer ? <Reports /> : <Navigate to="/kasir" />} />
+              <Route path="/kesehatan" element={isOwner || isMaintainer ? <Health /> : <Navigate to="/kasir" />} />
+              <Route path="/pengaturan" element={isOwner ? <Settings /> : <Navigate to="/kasir" />} />
+              <Route path="/barang-masuk" element={isOwner ? <StockIntake profile={profile} /> : <Navigate to="/kasir" />} />
+              <Route path="/barcode" element={isOwner ? <BarcodeManager /> : <Navigate to="/kasir" />} />
+              <Route path="/retur/:invoiceId" element={<ReturnSale profile={profile} />} />
+              <Route path="/kas" element={isOwner ? <CashSession /> : <Navigate to="/kasir" />} />
+              <Route path="/katalog" element={<Catalog profile={profile} />} />
+              <Route path="/produk/baru" element={isOwner ? <NewProduct /> : <Navigate to="/kasir" />} />
+              <Route path="*" element={<Navigate to={home} />} />
+            </Routes>
+          </Suspense>
+        </main>
+      </div>
+    </div>
+  )
 }

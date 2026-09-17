@@ -98,8 +98,19 @@ h3{font-size:18px}
 .receipt-view.receipt-w80{max-width:400px}
 
 @media print {
-  .sidebar,.main>header,.receipt-footer{display:none !important}
-  .receipt-view{border:none;box-shadow:none}
+  /* Cetak struk: hanya isi struk, tanpa navigasi atau tombol */
+  html,body{background:#fff !important}
+  .sidebar,.main>header,.receipt-footer,.offline-banner{display:none !important}
+  .main{padding:0 !important}
+  .receipt-view{border:none;box-shadow:none;border-radius:0;margin:0;padding:0;max-width:none}
+  .receipt-body table{font-size:12px}
+  @page{margin:4mm}
+}
+
+/* Lebar kertas struk saat dicetak */
+@media print {
+  .receipt-view.receipt-w58{width:58mm}
+  .receipt-view.receipt-w80{width:80mm}
 }
 
 @media (max-width: 900px) {
@@ -109,7 +120,6 @@ h3{font-size:18px}
 
 /* Section actions */
 .section-actions{display:flex;gap:8px;flex-wrap:wrap}
-button.small{padding:6px 10px;font-size:12px}
 
 /* Drafts */
 .drafts-panel{background:#fff;padding:14px 18px;border-radius:12px;border:1px solid #dfe8df;margin-bottom:16px}
@@ -257,7 +267,40 @@ textarea:focus{outline:2px solid #62b892;border-color:transparent}
 .photo-loading{font-size:11px;color:#819187}
 
 /* Offline banner */
-.offline-banner{background:#ffe9e4;color:#8e3220;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;font-size:14px;border:1px solid #e0b8b0}
+.offline-banner{background:#ffe9e4;color:#8e3220;padding:12px 16px;border-radius:10px;margin-bottom:16px;font-weight:600;font-size:16px;border:2px solid #e0b8b0}
+
+/* Navigasi berkelompok + ramah pengguna senior */
+.sidebar nav{display:grid;gap:18px;padding:20px 0;overflow-y:auto}
+.nav-group{display:grid;gap:4px}
+.nav-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#8fae9e;padding:0 12px 4px;font-weight:800}
+.sidebar a{color:#e4f0e8;padding:13px 14px;text-decoration:none;border-radius:9px;font-weight:600;font-size:16px;line-height:1.2;min-height:48px;display:flex;align-items:center}
+.sidebar a:hover{background:#ffffff18;color:#fff}
+
+/* Header pemakai */
+.who{display:flex;align-items:center;gap:8px;font-size:16px}
+.who .role{margin-left:4px}
+
+/* Aksi utama ramah sentuh (>=48px) */
+button,.button-link{min-height:48px}
+button.small{min-height:36px;padding:8px 12px;font-size:14px}
+.ghost.small{min-height:36px}
+input,select,textarea{font-size:16px;min-height:48px}
+select{min-height:48px}
+
+/* Teks lebih mudah dibaca pengguna senior */
+p{font-size:16px}
+.section-head p{font-size:16px}
+label{font-size:15px}
+small{font-size:13px}
+table{font-size:15px}
+.receipt-body table{font-size:14px}
+
+/* Fokus keyboard jelas */
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #62b892;outline-offset:2px}
+
+/* Kartu ringkasan lebih lega */
+.dash-value{font-size:30px}
+.report-row{padding:14px 0;font-size:16px}
 
 /* Ekspor CSV */
 .report-export{margin-top:16px}
