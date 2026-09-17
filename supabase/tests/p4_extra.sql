@@ -188,6 +188,10 @@ begin
     'ticket_id', v_ticket, 'mime', 'image/jpeg', 'byte_size', 100000));
   if not (v_res->>'ok')::boolean then raise exception 'AT-27: prepare valid gagal'; end if;
 
+  -- Simulasi unggah Storage (K13: finalize wajib menemukan objek nyata).
+  insert into storage.objects(bucket_id, name, metadata)
+  values ('ticket-photos', v_res->>'object_key', jsonb_build_object('size', 100000, 'mimetype', 'image/jpeg'));
+
   v_res := public.finalize_attachment_v1(jsonb_build_object(
     'operation_id', 'a2700000-0000-4000-8000-000000000006',
     'attachment_id', v_res->>'entity_id'));
