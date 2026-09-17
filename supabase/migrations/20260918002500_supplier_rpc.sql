@@ -94,8 +94,8 @@ create or replace function public.create_supplier_return_v1(p_input jsonb)
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
   v_actor uuid; v_old jsonb; v_op uuid; v_supplier_id uuid; v_reason text; v_item jsonb; v_idx integer := 0;
-  v_ids uuid[] := '{}'; v_req jsonb := '{}'::jsonb; v_row record; v_qty numeric; v_cost numeric;
-  v_claim numeric := 0; v_doc private.stock_documents%rowtype; v_doc_item uuid; v_return uuid;
+  v_ids uuid[] := '{}'; v_req jsonb := '{}'::jsonb; v_row record; v_qty numeric; v_cost numeric(24,6);
+  v_claim numeric(24,6) := 0; v_doc private.stock_documents%rowtype; v_doc_item uuid; v_return uuid;
   v_pos private.stock_positions%rowtype; v_lot private.inventory_lots%rowtype; v_product private.products%rowtype;
 begin
   v_actor := private.require_role(array['OWNER']);
