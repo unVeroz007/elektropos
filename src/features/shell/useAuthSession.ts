@@ -29,7 +29,7 @@ export function useAuthSession() {
     if (!client) return
     let alive = true
 
-    async function apply(session: Session | null) {
+    const apply = async (session: Session | null) => {
       if (!session) {
         if (userId.current !== null) queryClient.clear()
         userId.current = null
