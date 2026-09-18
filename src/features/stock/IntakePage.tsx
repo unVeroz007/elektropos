@@ -62,7 +62,7 @@ export function IntakePage() {
   const total = totalCost(lines)
   const errors = [
     ...(lines.length === 0 ? ['Belum ada barang.'] : []),
-    ...lines.flatMap(lineErrors),
+    ...lines.flatMap(line => lineErrors(line)),
     ...(mode === 'RECEIPT' ? paymentErrors(payment, total, supplier) : []),
   ]
 

@@ -64,11 +64,13 @@ function RollSection({ line, onChange }: { line: IntakeLine; onChange: (next: In
   )
 }
 
-export function IntakeLineCard({ line, units, onChange, onRemove }: {
+export function IntakeLineCard({ line, units, onChange, onRemove, withCost = true }: {
   line: IntakeLine
   units: Unit[]
   onChange: (next: IntakeLine) => void
   onRemove: () => void
+  /** false untuk barang pengganti distributor (modal diambil dari nilai klaim). */
+  withCost?: boolean
 }) {
   const base = lineBaseQty(line)
   const set = (patch: Partial<IntakeLine>) => onChange(withAutoRolls({ ...line, ...patch }))
@@ -90,10 +92,12 @@ export function IntakeLineCard({ line, units, onChange, onRemove }: {
         )}
         <QuantityInput label="Jumlah masuk" unit={line.unitLabel} value={line.qty} onChange={qty => set({ qty })}
           hint={base && line.factor !== '1' ? `= ${formatQuantity(base, line.baseUnit)}` : undefined} />
-        <RupiahInput label="Total modal baris ini" value={line.cost} onChange={cost => set({ cost })}
-          hint="Total harga beli semua barang di baris ini (sudah termasuk ongkos/diskon), bukan harga satuan." />
+        {withCost && (
+          <RupiahInput label="Total modal baris ini" value={line.cost} onChange={cost => set({ cost })}
+            hint="Total harga beli semua barang di baris ini (sudah termasuk ongkos/diskon), bukan harga satuan." />
+        )}
       </div>
-      {costIsZero && (
+      {withCost && costIsZero && (
         <TextInput label="Alasan modal nol (wajib)" value={line.freeReason} onChange={freeReason => set({ freeReason })}
           maxLength={200} placeholder="Contoh: bonus dari distributor" />
       )}

@@ -87,14 +87,18 @@ export function rollLabelsPreview(line: IntakeLine): string[] {
   return [...auto, ...line.positions.map(p => p.label.trim() || '(label belum diisi)')]
 }
 
-export function lineErrors(line: IntakeLine): string[] {
+/** `withCost: false` untuk barang pengganti distributor: modal otomatis dari nilai klaim. */
+export function lineErrors(line: IntakeLine, options: { withCost?: boolean } = {}): string[] {
+  const { withCost = true } = options
   const errors: string[] = []
   const name = line.productName
   const base = lineBaseQty(line)
   if (!base || base.isZero()) errors.push(`${name}: jumlah wajib diisi dan lebih dari nol.`)
-  const cost = tryRupiah(line.cost)
-  if (!cost) errors.push(`${name}: total modal wajib diisi (Rupiah bulat).`)
-  else if (cost.isZero() && !line.freeReason.trim()) errors.push(`${name}: modal nol wajib diberi alasan.`)
+  if (withCost) {
+    const cost = tryRupiah(line.cost)
+    if (!cost) errors.push(`${name}: total modal wajib diisi (Rupiah bulat).`)
+    else if (cost.isZero() && !line.freeReason.trim()) errors.push(`${name}: modal nol wajib diberi alasan.`)
+  }
   if (line.trackSegments) {
     const count = rollCount(line)
     if (line.rollCount.trim() !== '' && count === 0) errors.push(`${name}: jumlah roll harus bilangan bulat.`)
@@ -133,13 +137,13 @@ export function paymentErrors(payment: IntakePayment, total: Decimal, supplier: 
   return errors
 }
 
-export function buildItem(line: IntakeLine): Record<string, unknown> {
-  const item: Record<string, unknown> = {
-    product_unit_id: line.unitId,
-    qty: parseQuantity(line.qty).toFixed(),
-    acquisition_cost: parseRupiah(line.cost).toFixed(0),
+export function buildItem(line: IntakeLine, options: { withCost?: boolean } = {}): Record<string, unknown> {
+  const { withCost = true } = options
+  const item: Record<string, unknown> = { product_unit_id: line.unitId, qty: parseQuantity(line.qty).toFixed() }
+  if (withCost) {
+    item.acquisition_cost = parseRupiah(line.cost).toFixed(0)
+    if (parseRupiah(line.cost).isZero()) item.free_reason = line.freeReason.trim()
   }
-  if (parseRupiah(line.cost).isZero()) item.free_reason = line.freeReason.trim()
   if (line.trackSegments) {
     const count = rollCount(line)
     if (count > 0) {
@@ -167,7 +171,7 @@ export type IntakeHeader = { supplierId: string; sourceNote: string; sourceDate:
 export function buildIntakePayload(mode: IntakeMode, header: IntakeHeader, lines: IntakeLine[], payment: IntakePayment): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     reason: mode === 'OPENING' ? 'Stok awal' : 'Barang masuk',
-    items: lines.map(buildItem),
+    items: lines.map(line => buildItem(line)),
   }
   if (header.sourceNote.trim()) payload.source_note = header.sourceNote.trim()
   if (header.sourceDate) payload.source_date = header.sourceDate
