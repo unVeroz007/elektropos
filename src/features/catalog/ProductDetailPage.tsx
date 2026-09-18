@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import Decimal from 'decimal.js'
 import { useCommand } from '../../lib/useCommand'
 import { formatDateTime, formatQuantity, formatRupiah } from '../../lib/numbers'
 import { permissions, useProfile } from '../../lib/session'
 import {
-  Badge, Card, ConfirmDialog, EmptyState, ErrorMessage, Loading, PageHeader, SummaryRow, TextArea,
+  Badge, Card, ConfirmDialog, EmptyState, ErrorMessage, Loading, Notice, PageHeader, SummaryRow, TextArea,
 } from '../../components/ui'
 import { CONDITION_LABEL, LOCATION_LABEL, labelOf } from '../../components/labels'
 import type { ProductDetail, ProductPosition } from '../../components/productTypes'
@@ -137,6 +137,7 @@ export function ProductDetailPage() {
   const canEdit = permissions.manageCatalog(profile)
   const product = useProduct(productId)
   const categories = useCategories()
+  const notice = (useLocation().state as { notice?: string } | null)?.notice
 
   if (product.isLoading) return <Loading label="Memuat barang…" />
   if (product.error || !product.data) {
@@ -160,6 +161,7 @@ export function ProductDetailPage() {
             <ArchiveButton product={p} />
           </>
         )} />
+      {notice && <Notice tone="success">{notice}</Notice>}
       {!p.active && <Badge tone="warning">Barang ini sudah diarsipkan</Badge>}
       <Card title="Keterangan">
         <SummaryRow label="Kode barang" value={p.sku} />
