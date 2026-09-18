@@ -32,9 +32,9 @@ begin
     on conflict (id) do update set display_name = excluded.display_name, role = excluded.role, active = true;
   end if;
 
-  -- Identitas toko
+  -- Identitas toko. Penanda "(DEMO)" dipakai setup-demo untuk menolak berjalan di data toko nyata.
   update private.shop_settings set
-    name = 'Toko Listrik Sinar Jaya',
+    name = 'Toko Listrik Sinar Jaya (DEMO)',
     address = 'Jl. Merdeka No. 45, Bandung',
     phone = '022-1234567',
     receipt_width = 80,
@@ -93,3 +93,14 @@ begin
     values (v_pid, v_uid, '8991001001004');
   end if;
 end $$;
+
+-- Satuan roll utuh kabel: hanya dapat dijual dari roll yang masih bersegel (BR-03).
+insert into private.product_units(product_id, label, factor_base, sale_step, sell_price, is_default)
+select p.id, 'roll 100m', 100, 1, 780000, false
+from private.products p
+where p.sku = 'DEMO-KABEL-15'
+  and not exists (select 1 from private.product_units u where u.product_id = p.id and u.label = 'roll 100m' and u.active);
+
+-- Batas stok minimum contoh agar beranda menampilkan stok menipis.
+update private.products set min_stock = 5 where sku in ('DEMO-LAMPU-12W', 'DEMO-SAKLAR') and min_stock = 0;
+update private.products set min_stock = 30 where sku = 'DEMO-KABEL-15' and min_stock = 0;
