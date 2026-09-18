@@ -1,0 +1,104 @@
+/* Modul servis & pelanggan. Nilai visual dari src/styles/tokens.css. HP 360px tanpa scroll horizontal. */
+
+.srv-page { display: grid; gap: var(--space-4); max-width: 1100px; min-width: 0; font-size: var(--font-size-base); }
+.srv-page > * { min-width: 0; }
+.srv-page .ui-card + .ui-card { margin-top: 0; }
+.srv-muted { color: var(--color-text-muted); }
+.srv-prewrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.srv-lead { font-size: var(--font-size-lg); margin: 0 0 var(--space-3); }
+.srv-subheading { font-size: var(--font-size-lg); margin: var(--space-5) 0 var(--space-2); }
+.srv-notice-title { margin: 0 0 var(--space-2); font-weight: 700; }
+.srv-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.srv-visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.srv-filters, .srv-grid-2, .srv-grid-3, .srv-summary-grid { display: grid; gap: 0 var(--space-4); }
+@media (min-width: 720px) {
+  .srv-filters { grid-template-columns: 2fr 1.4fr 1fr; }
+  .srv-grid-2, .srv-summary-grid { grid-template-columns: 1fr 1fr; }
+  .srv-grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+
+.srv-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-3) 0; }
+.srv-actions .ui-button { flex: 1 1 auto; }
+
+/* Daftar tiket */
+.srv-ticket-list, .srv-option-list, .srv-part-list, .srv-estimate-list, .srv-payment-list, .srv-invoice-lines, .srv-timeline {
+  list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2);
+}
+.srv-ticket-card, .srv-option {
+  display: grid; gap: var(--space-1); width: 100%; min-height: var(--touch-target);
+  padding: var(--space-3) var(--space-4); text-align: left; font: inherit; font-size: var(--font-size-base);
+  color: var(--color-text); text-decoration: none; background: var(--color-surface);
+  border: 2px solid var(--color-border); border-radius: var(--radius-lg); cursor: pointer; overflow-wrap: anywhere;
+}
+.srv-ticket-card:hover, .srv-option:hover, .srv-option[aria-current='true'] { border-color: var(--color-primary); }
+.srv-ticket-top, .srv-ticket-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.srv-ticket-top strong { font-size: var(--font-size-lg); }
+.srv-ticket-main { display: grid; gap: 2px; }
+.srv-ticket-customer { font-weight: 700; }
+.srv-ticket-meta { color: var(--color-text-muted); font-size: var(--font-size-sm); }
+
+/* Formulir */
+.srv-picked {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-3); margin-bottom: var(--space-3); border-radius: var(--radius); background: var(--color-surface-muted);
+}
+.srv-picked > div { display: grid; gap: 2px; min-width: 0; }
+.srv-customer-search, .srv-new-customer { display: grid; gap: var(--space-2); }
+.srv-subform {
+  margin-top: var(--space-4); padding: var(--space-4); border: 2px solid var(--color-border);
+  border-radius: var(--radius-lg); background: var(--color-surface-muted);
+}
+.srv-subform-title { margin: 0 0 var(--space-3); font-weight: 700; font-size: var(--font-size-lg); }
+.srv-fieldset { border: 1px solid var(--color-border); border-radius: var(--radius); padding: var(--space-3); margin: 0 0 var(--space-4); min-width: 0; }
+.srv-fieldset legend { font-weight: 700; padding: 0 var(--space-1); }
+.srv-fieldset-plain { border: 0; margin: 0; padding: 0; min-width: 0; }
+.srv-charge-line { padding-bottom: var(--space-3); margin-bottom: var(--space-3); border-bottom: 1px dashed var(--color-border); }
+
+.srv-collapsible { margin-top: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.srv-collapsible > summary {
+  min-height: var(--touch-target); display: flex; align-items: center; padding: 0 var(--space-4);
+  font-weight: 700; color: var(--color-primary); cursor: pointer;
+}
+.srv-collapsible-body { padding: 0 var(--space-4) var(--space-4); }
+
+/* Estimasi, part, tagihan, pembayaran */
+.srv-estimate, .srv-part, .srv-payment-list li {
+  padding: var(--space-3); border: 1px solid var(--color-border); border-radius: var(--radius); overflow-wrap: anywhere;
+}
+.srv-estimate.is-old { opacity: 0.7; }
+.srv-estimate p, .srv-part p { margin: var(--space-1) 0; }
+.srv-estimate-head, .srv-part-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); }
+.srv-payment-list li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.srv-invoice-lines li {
+  display: flex; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border); overflow-wrap: anywhere;
+}
+.srv-invoice-lines small { display: block; font-size: var(--font-size-sm); }
+
+.srv-timeline li { display: grid; gap: 2px; padding-left: var(--space-4); border-left: 3px solid var(--color-border); }
+
+.srv-photo-grid { list-style: none; padding: 0; margin: 0 0 var(--space-3); display: grid; gap: var(--space-2); grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+.srv-photo-grid li { aspect-ratio: 1; display: grid; place-items: center; background: var(--color-surface-muted); border-radius: var(--radius); overflow: hidden; }
+.srv-photo-grid a { display: block; width: 100%; height: 100%; }
+.srv-photo-grid img { width: 100%; height: 100%; object-fit: cover; }
+.srv-progress { display: grid; gap: var(--space-1); margin: var(--space-3) 0; }
+.srv-progress progress { width: 100%; height: 16px; }
+
+/* Kuitansi */
+.srv-receipt { display: grid; gap: 0; }
+.srv-receipt header { display: grid; text-align: center; margin-bottom: var(--space-3); }
+.srv-receipt h2 { text-align: center; font-size: var(--font-size-lg); margin: 0 0 var(--space-2); }
+
+@media print {
+  body:has(.srv-receipt-dialog[open]) *:not(:has(.srv-receipt-dialog[open])):not(.srv-receipt-dialog[open]):not(.srv-receipt-dialog[open] *) {
+    display: none !important;
+  }
+  .srv-receipt-dialog[open] { position: static; width: 100%; padding: 0; box-shadow: none; }
+  .srv-receipt-dialog::backdrop { background: none; }
+  .srv-no-print { display: none !important; }
+}
