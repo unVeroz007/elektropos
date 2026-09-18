@@ -1,0 +1,108 @@
+/* Pemindai barcode (dipakai kasir, barang masuk, daftar barcode). Nilai dari tokens.css. */
+
+.sc-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.sc-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-3); }
+.sc-title { margin: 0; font-size: var(--font-size-lg); }
+.sc-desc { margin: var(--space-1) 0 0; color: var(--color-text-muted); font-size: var(--font-size-base); }
+
+.sc-flash {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid var(--color-success);
+  border-radius: var(--radius);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-size: var(--font-size-lg);
+  overflow-wrap: anywhere;
+}
+.sc-flash strong { font-family: ui-monospace, monospace; }
+.sc-flash-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-success);
+  color: var(--color-primary-contrast);
+  font-weight: 800;
+}
+
+.sc-camera { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+.sc-viewport { position: relative; line-height: 0; }
+.sc-video { width: 100%; max-height: 300px; object-fit: cover; border-radius: var(--radius); background: var(--color-text); }
+.sc-reticle {
+  position: absolute;
+  inset: 15% 12%;
+  border: 3px solid var(--color-accent);
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+.sc-live {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius);
+  background: var(--color-danger);
+  color: var(--color-primary-contrast);
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  line-height: var(--line-height);
+}
+.sc-note { margin: 0; font-size: var(--font-size-base); }
+.sc-focus { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.sc-focus-range, .sc-device { display: grid; gap: var(--space-1); font-size: var(--font-size-base); flex: 1 1 200px; }
+.sc-focus-range input { width: 100%; min-height: var(--touch-target); accent-color: var(--color-primary); }
+.sc-device select {
+  min-height: var(--touch-target);
+  padding: 8px 12px;
+  font: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.sc-manual { margin-top: var(--space-3); display: grid; gap: var(--space-1); }
+.sc-manual-label { font-weight: 650; font-size: var(--font-size-base); }
+.sc-ready { color: var(--color-success); font-weight: 700; }
+.sc-manual-row { display: flex; gap: var(--space-2); }
+.sc-manual-row input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch-target);
+  padding: 10px 12px;
+  font-family: ui-monospace, monospace;
+  font-size: var(--font-size-base);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  background: var(--color-surface);
+}
+.sc-ready-button {
+  margin-top: var(--space-2);
+  min-height: var(--touch-target);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface-muted);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-size-base);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media print {
+  .sc-panel { display: none; }
+}

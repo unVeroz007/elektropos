@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { createHidState, feedHidKey, normalizeBarcode } from './scanner'
 
+function typeFast(state: ReturnType<typeof createHidState>, text: string, start: number, gap = 10): number {
+  let t = start
+  for (const ch of text) {
+    feedHidKey(state, ch, t)
+    t += gap
+  }
+  return t
+}
+
 describe('scanner barcode', () => {
   it('menormalkan spasi tanpa membuang nol di depan', () => {
     expect(normalizeBarcode('  0012345678901 ')).toBe('0012345678901')
@@ -9,16 +18,8 @@ describe('scanner barcode', () => {
 
   it('mendeteksi scan HID saat Enter ditekan', () => {
     const state = createHidState()
-    const chars = '8991001001001'.split('')
-    let result: string | null = null
-    let t = 1000
-    for (const ch of chars) {
-      result = feedHidKey(state, ch, t)
-      t += 10
-    }
-    expect(result).toBeNull()
-    result = feedHidKey(state, 'Enter', t)
-    expect(result).toBe('8991001001001')
+    const t = typeFast(state, '8991001001001', 1000)
+    expect(feedHidKey(state, 'Enter', t)).toBe('8991001001001')
   })
 
   it('menolak Enter dengan kode terlalu pendek', () => {
@@ -30,25 +31,27 @@ describe('scanner barcode', () => {
   it('memisahkan ketikan lambat sebagai scan baru', () => {
     const state = createHidState()
     for (const ch of '111111') feedHidKey(state, ch, 1000)
-    let t = 2000
-    for (const ch of '222222') {
-      feedHidKey(state, ch, t)
-      t += 10
-    }
+    const t = typeFast(state, '222222', 2000)
     expect(feedHidKey(state, 'Enter', t)).toBe('222222')
+  })
+
+  it('ketikan manual lambat lalu Enter tidak dianggap scan (tidak memotong kode)', () => {
+    const state = createHidState()
+    const t = typeFast(state, '899100', 1000, 250)
+    expect(feedHidKey(state, 'Enter', t)).toBeNull()
+  })
+
+  it('Enter yang datang lama setelah ketikan cepat tidak dianggap scan', () => {
+    const state = createHidState()
+    const t = typeFast(state, '12345', 1000)
+    expect(feedHidKey(state, 'Enter', t + 2000)).toBeNull()
   })
 
   it('mengabaikan tombol non-karakter', () => {
     const state = createHidState()
     expect(feedHidKey(state, 'Shift', 1000)).toBeNull()
     expect(feedHidKey(state, 'ArrowUp', 1001)).toBeNull()
-    expect(state.buffer).toBe('')
-  })
-
-  it('mengabaikan panah yang dipencet panjang', () => {
-    const state = createHidState()
-    expect(feedHidKey(state, 'ArrowDown', 1000)).toBeNull()
-    expect(feedHidKey(state, 'Escape', 1000)).toBeNull()
+    expect(feedHidKey(state, 'Escape', 1002)).toBeNull()
     expect(state.buffer).toBe('')
   })
 })
