@@ -11,7 +11,7 @@ import { Button, Collapsible, CommandError } from '../common'
 import { STOCK_CONDITION, STOCK_LOCATION } from '../labels'
 import { partQtyError } from '../logic'
 import type { CommandResult, PartEvent, StockCondition, StockLocation, StockPositionRow, TicketDetail } from '../types'
-import { useDebounced } from '../useDebounced'
+import { useDebounced } from '../../../components/useDebounced'
 
 function locationLabel(location: string | null): string {
   return location === 'SHOP' || location === 'FIELD_FATHER' ? STOCK_LOCATION[location] : 'Lokasi lain'

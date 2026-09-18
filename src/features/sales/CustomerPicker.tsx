@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { ErrorMessage, Loading, TextInput } from '../../components/ui'
 import { searchCustomers } from './api'
-import { useDebouncedValue } from './hooks'
+import { useDebounced } from '../../components/useDebounced'
 import type { CustomerSummary } from './types'
 
 type Found = { query: string; items: CustomerSummary[]; error: unknown }
@@ -12,7 +12,7 @@ export function CustomerPicker({ value, onChange }: {
   onChange: (customer: CustomerSummary | null) => void
 }) {
   const [query, setQuery] = useState('')
-  const debounced = useDebouncedValue(query.trim(), 300)
+  const debounced = useDebounced(query.trim(), 300)
   const [found, setFound] = useState<Found | null>(null)
 
   useEffect(() => {

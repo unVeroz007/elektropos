@@ -10,7 +10,7 @@ import { customerHistory, findSimilarCustomers, searchCustomers, serviceKeys, us
 import { Button, CommandError, PaymentBadge, StatusBadge } from './common'
 import { telHref } from './logic'
 import type { CustomerRef, SimilarCustomer } from './types'
-import { useDebounced } from './useDebounced'
+import { useDebounced } from '../../components/useDebounced'
 import './service.css'
 
 type Mode = { kind: 'list' } | { kind: 'new' } | { kind: 'view'; customerId: string }

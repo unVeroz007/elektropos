@@ -3,7 +3,7 @@ import { EmptyState, ErrorMessage, Loading, TextInput } from '../../components/u
 import { formatQuantity, formatRupiah } from '../../lib/numbers'
 import { searchProducts } from './api'
 import { snapshotFromSearch, type ProductSnapshot } from './cart'
-import { useDebouncedValue } from './hooks'
+import { useDebounced } from '../../components/useDebounced'
 import type { ProductSearchItem } from './types'
 
 type SearchState = { query: string; items: ProductSearchItem[]; error: unknown }
@@ -17,7 +17,7 @@ export function ProductSearch({ onAdd, label = 'Cari barang' }: {
   label?: string
 }) {
   const [query, setQuery] = useState('')
-  const debounced = useDebouncedValue(query.trim(), 250)
+  const debounced = useDebounced(query.trim(), 250)
   const [result, setResult] = useState<SearchState>({ query: '', items: [], error: null })
 
   useEffect(() => {

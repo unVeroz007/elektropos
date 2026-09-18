@@ -9,7 +9,7 @@ import { Button, PaymentBadge, StatusBadge } from './common'
 import { CUSTODY, LOCATION } from './labels'
 import { isPositive } from './logic'
 import type { ServiceLocation, TicketListItem } from './types'
-import { useDebounced } from './useDebounced'
+import { useDebounced } from '../../components/useDebounced'
 
 type FilterKey = 'active' | 'new' | 'approval' | 'working' | 'ready' | 'not_picked' | 'all'
 

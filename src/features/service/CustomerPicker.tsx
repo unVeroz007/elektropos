@@ -4,7 +4,7 @@ import { Checkbox, EmptyState, ErrorMessage, Loading, Notice, TextArea, TextInpu
 import { findSimilarCustomers, searchCustomers, serviceKeys } from './api'
 import { Button } from './common'
 import type { CustomerRef, SimilarCustomer } from './types'
-import { useDebounced } from './useDebounced'
+import { useDebounced } from '../../components/useDebounced'
 
 export type NewCustomerDraft = {
   name: string

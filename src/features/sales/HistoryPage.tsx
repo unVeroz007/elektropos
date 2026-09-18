@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Badge, Card, EmptyState, ErrorMessage, Loading, PageHeader, TextInput } from '../../components/ui'
 import { formatDateTime, formatRupiah, todayInShop } from '../../lib/numbers'
 import { listInvoices } from './api'
-import { useDebouncedValue } from './hooks'
+import { useDebounced } from '../../components/useDebounced'
 import { paymentLabel, paymentStatus } from './labels'
 import type { InvoiceListItem } from './types'
 import './sales.css'
@@ -17,7 +17,7 @@ export function HistoryPage() {
   const [endDate, setEndDate] = useState(() => todayInShop())
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
-  const search = useDebouncedValue(query, 300)
+  const search = useDebounced(query, 300)
   const datesValid = startDate !== '' && endDate !== '' && startDate <= endDate
 
   const invoices = useQuery({
