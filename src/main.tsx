@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { toAppError } from './lib/errors'
 import './styles/tokens.css'
 import './style.css'
 
@@ -11,12 +12,16 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 15_000,
       refetchOnWindowFocus: true,
-      retry: 1,
+      // Penolakan izin/aturan bisnis tidak akan berubah bila diulang; hanya gangguan jaringan yang dicoba lagi.
+      retry: (failureCount, error) => toAppError(error).kind === 'network' && failureCount < 2,
     },
   },
 })
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const root = document.getElementById('root')
+if (!root) throw new Error('Elemen #root tidak ditemukan di index.html')
+
+ReactDOM.createRoot(root).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
