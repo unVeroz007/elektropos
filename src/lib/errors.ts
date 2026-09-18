@@ -42,6 +42,8 @@ const HINTS: Record<string, string> = {
   PAYMENT_OUTSTANDING: 'Selesaikan pembayaran sebelum alat diserahkan.',
   INVALID_NUMBER: 'Periksa kembali angka yang diketik.',
   INVALID_DATE: 'Periksa kembali tanggal yang dipilih.',
+  ALREADY_FINALIZED: 'Buka Riwayat Nota untuk melihat nota yang sudah tercatat; jangan menagih pelanggan dua kali.',
+  NOTE_REQUIRED: 'Isi keterangan singkat penyebab selisih.',
 }
 
 const NETWORK_PATTERN = /Failed to fetch|NetworkError|Network request failed|ERR_NETWORK|Load failed|ECONNREFUSED|ERR_CONNECTION|fetch failed/i

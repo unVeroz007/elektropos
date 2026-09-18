@@ -34,7 +34,7 @@ type Message = { tone: 'info' | 'success' | 'warning'; text: string }
 
 const EMPTY_FORM: FormState = { method: 'CASH', tenderedText: '', confirmedTotal: null, reference: '', freeReason: '' }
 
-const newId = () => crypto.randomUUID()
+const newId = (): string => crypto.randomUUID()
 
 /**
  * Kasir (WF-01, FR-POS-01/02). Keranjang menyimpan snapshot barang; total dari server

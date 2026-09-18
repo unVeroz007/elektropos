@@ -1,4 +1,6 @@
-// Titik ekspor modul penjualan (kasir, struk, riwayat, retur). Dipakai App.tsx.
-export { Cashier as CashierPage, Receipt as ReceiptPage } from '../cashier'
-export { History as HistoryPage } from '../history'
-export { ReturnSale as ReturnPage } from '../return'
+// Titik ekspor modul penjualan. Dipakai App.tsx:
+// `/kasir`, `/struk/:invoiceId`, `/riwayat`, `/retur/:invoiceId`.
+export { CashierPage } from './CashierPage'
+export { ReceiptPage } from './ReceiptPage'
+export { HistoryPage } from './HistoryPage'
+export { ReturnPage } from './ReturnPage'
