@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createHidState, feedHidKey, normalizeBarcode } from '../lib/scanner'
+import { createHidState, feedHidKey, normalizeBarcode } from './scanner'
 
 /**
  * Scanner HID (scanner fisik) menempel HANYA pada satu elemen input.
- * Tidak mencegat pengetikan kolom lain.
+ * Tidak mencegat pengetikan kolom lain maupun keyboard global.
  */
 export function useHidInputScanner(
   inputRef: React.RefObject<HTMLInputElement | null>,
@@ -11,16 +11,19 @@ export function useHidInputScanner(
   enabled = true,
 ) {
   const stateRef = useRef(createHidState())
+  const onScanRef = useRef(onScan)
+  useEffect(() => { onScanRef.current = onScan }, [onScan])
 
   useEffect(() => {
     const el = inputRef.current
     if (!el || !enabled) return
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.isComposing) return
       const code = feedHidKey(stateRef.current, event.key, Date.now())
       if (code) {
         event.preventDefault()
-        onScan(code)
+        onScanRef.current(code)
       }
     }
     const onBlur = () => { stateRef.current = createHidState() }
@@ -31,15 +34,25 @@ export function useHidInputScanner(
       el.removeEventListener('keydown', onKeyDown)
       el.removeEventListener('blur', onBlur)
     }
-  }, [inputRef, onScan, enabled])
+  }, [inputRef, enabled])
 }
 
 export type CameraState = 'idle' | 'starting' | 'scanning' | 'unsupported' | 'denied' | 'error'
 export type VideoDevice = { id: string; label: string }
 
+/** Kemampuan fokus kamera yang dilaporkan browser (tidak semua kamera mendukung). */
+export type FocusSupport = {
+  modes: string[]
+  distance: { min: number; max: number; step: number } | null
+}
+
 type ZxingResult = { getText: () => string }
 type ZxingReader = {
   decodeFromCanvas: (canvas: HTMLCanvasElement) => ZxingResult
+}
+type FocusCapabilities = {
+  focusMode?: string[]
+  focusDistance?: { min: number; max: number; step?: number }
 }
 
 /** Lebar maksimum frame yang diproses. */
@@ -49,11 +62,24 @@ export const SCAN_INTERVAL_MS = 100
 /** Kode sama dihitung lagi hanya bila tidak terlihat selama jeda ini (ms). */
 export const REPEAT_AFTER_ABSENT_MS = 1200
 
+/**
+ * Dedup kamera (S12): barcode yang terus terlihat hanya dihitung sekali. Kode sama
+ * dihitung lagi setelah keluar dari bingkai minimal REPEAT_AFTER_ABSENT_MS.
+ */
+export function shouldEmitCameraCode(
+  last: { code: string; seenAt: number } | null,
+  code: string,
+  now: number,
+): boolean {
+  return !(last !== null && last.code === code && now - last.seenAt < REPEAT_AFTER_ABSENT_MS)
+}
+
 /** Bunyi bip singkat saat barcode terbaca, tanpa file audio eksternal. */
 function playBeep() {
+  const Ctx = window.AudioContext
+    ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+  if (!Ctx) return
   try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    if (!Ctx) return
     const ctx = new Ctx()
     const osc = ctx.createOscillator()
     const gain = ctx.createGain()
@@ -65,14 +91,37 @@ function playBeep() {
     osc.start()
     osc.stop(ctx.currentTime + 0.12)
     setTimeout(() => { void ctx.close() }, 400)
+  } catch (err) {
+    // Audio diblokir kebijakan autoplay browser: indikator visual tetap tampil.
+    void err
+  }
+}
+
+function readFocusSupport(track: MediaStreamTrack | undefined): FocusSupport {
+  const caps = (track?.getCapabilities?.() ?? {}) as FocusCapabilities
+  const distance = caps.focusDistance
+  return {
+    modes: caps.focusMode ?? [],
+    distance: distance && distance.max > distance.min
+      ? { min: distance.min, max: distance.max, step: distance.step || (distance.max - distance.min) / 20 }
+      : null,
+  }
+}
+
+async function applyFocus(track: MediaStreamTrack | undefined, constraint: Record<string, unknown>): Promise<boolean> {
+  if (!track?.applyConstraints) return false
+  try {
+    await track.applyConstraints({ advanced: [constraint] } as unknown as MediaTrackConstraints)
+    return true
   } catch {
-    // audio diblokir browser; abaikan (indikator visual tetap tampil)
+    // Kamera menolak pengaturan fokus: tetap memakai fokus bawaan.
+    return false
   }
 }
 
 /**
- * Kamera barcode. Kamera langsung menyala saat komponen aktif (tanpa klik kedua),
- * mencoba 4 orientasi tiap frame, dan membunyikan bip saat berhasil.
+ * Kamera barcode: mencoba 4 orientasi tiap frame, bip saat berhasil, dedup kode
+ * yang terus terlihat, dan fokus otomatis/manual bila kamera mendukung.
  */
 export function useCameraScanner(onScan: (code: string) => void) {
   const [state, setState] = useState<CameraState>('idle')
@@ -80,6 +129,7 @@ export function useCameraScanner(onScan: (code: string) => void) {
   const [devices, setDevices] = useState<VideoDevice[]>([])
   const [deviceId, setDeviceId] = useState<string>('')
   const [lastDetected, setLastDetected] = useState('')
+  const [focus, setFocus] = useState<FocusSupport>({ modes: [], distance: null })
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const timerRef = useRef<number | null>(null)
@@ -88,7 +138,7 @@ export function useCameraScanner(onScan: (code: string) => void) {
   // Dinaikkan setiap stop(); start() yang masih menunggu kamera membatalkan diri bila token berubah.
   const sessionRef = useRef(0)
   const onScanRef = useRef(onScan)
-  onScanRef.current = onScan
+  useEffect(() => { onScanRef.current = onScan }, [onScan])
 
   const refreshDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return
@@ -119,7 +169,26 @@ export function useCameraScanner(onScan: (code: string) => void) {
     streamRef.current?.getTracks().forEach(t => t.stop())
     streamRef.current = null
     if (videoRef.current) videoRef.current.srcObject = null
+    setFocus({ modes: [], distance: null })
     setState(s => (s === 'scanning' || s === 'starting' ? 'idle' : s))
+  }, [])
+
+  /** Minta kamera memfokuskan ulang (mis. barcode buram karena terlalu dekat). */
+  const refocus = useCallback(async () => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    const modes = readFocusSupport(track).modes
+    if (modes.includes('single-shot')) await applyFocus(track, { focusMode: 'single-shot' })
+    if (modes.includes('continuous')) await applyFocus(track, { focusMode: 'continuous' })
+  }, [])
+
+  /** Fokus manual: 0 = paling dekat, 1 = paling jauh (dipetakan ke rentang kamera). */
+  const setManualFocus = useCallback(async (fraction: number) => {
+    const track = streamRef.current?.getVideoTracks()[0]
+    const support = readFocusSupport(track)
+    if (!support.distance) return
+    const { min, max } = support.distance
+    const value = min + (max - min) * Math.min(1, Math.max(0, fraction))
+    await applyFocus(track, { focusMode: 'manual', focusDistance: value })
   }, [])
 
   const start = useCallback(async () => {
@@ -146,7 +215,7 @@ export function useCameraScanner(onScan: (code: string) => void) {
 
       const reader = new BrowserMultiFormatReader(hints) as unknown as ZxingReader
       const video = videoRef.current
-      if (!video) throw new Error('Elemen video belum siap')
+      if (!video) throw new Error('Tampilan kamera belum siap. Tutup lalu buka lagi.')
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -167,17 +236,22 @@ export function useCameraScanner(onScan: (code: string) => void) {
       video.setAttribute('playsinline', 'true')
       await video.play()
 
+      const track = stream.getVideoTracks()[0]
+      const support = readFocusSupport(track)
+      if (support.modes.includes('continuous')) await applyFocus(track, { focusMode: 'continuous' })
+      setFocus(support)
+
       const frame = document.createElement('canvas')
       const fctx = frame.getContext('2d', { willReadFrequently: true })
       const rotated = document.createElement('canvas')
       const rctx = rotated.getContext('2d', { willReadFrequently: true })
-      if (!fctx || !rctx) throw new Error('Canvas 2D tidak tersedia')
+      if (!fctx || !rctx) throw new Error('Browser ini tidak dapat memproses gambar kamera.')
 
       const tryDecode = (source: HTMLCanvasElement): string | null => {
         try {
           return normalizeBarcode(reader.decodeFromCanvas(source).getText())
         } catch {
-          return null
+          return null // frame ini tidak berisi barcode terbaca
         }
       }
 
@@ -199,12 +273,9 @@ export function useCameraScanner(onScan: (code: string) => void) {
         const now = Date.now()
         setLastDetected(code)
         setError('')
-        const last = lastRef.current
-        // Barcode yang terus terlihat di kamera hanya dihitung sekali. Scan ulang kode
-        // yang sama baru dihitung setelah barcode keluar dari bingkai sejenak.
-        const repeated = last !== null && last.code === code && now - last.seenAt < REPEAT_AFTER_ABSENT_MS
+        const emitNow = shouldEmitCameraCode(lastRef.current, code, now)
         lastRef.current = { code, seenAt: now }
-        if (repeated) return
+        if (!emitNow) return
         playBeep()
         onScanRef.current(code)
       }
@@ -216,23 +287,18 @@ export function useCameraScanner(onScan: (code: string) => void) {
           timerRef.current = window.setTimeout(loop, 200)
           return
         }
-        try {
-          const scale = Math.min(1, MAX_PROCESS_WIDTH / v.videoWidth)
-          frame.width = Math.round(v.videoWidth * scale)
-          frame.height = Math.round(v.videoHeight * scale)
-          fctx.imageSmoothingEnabled = true
-          fctx.imageSmoothingQuality = 'high'
-          fctx.drawImage(v, 0, 0, frame.width, frame.height)
+        const scale = Math.min(1, MAX_PROCESS_WIDTH / v.videoWidth)
+        frame.width = Math.round(v.videoWidth * scale)
+        frame.height = Math.round(v.videoHeight * scale)
+        fctx.imageSmoothingEnabled = true
+        fctx.imageSmoothingQuality = 'high'
+        fctx.drawImage(v, 0, 0, frame.width, frame.height)
 
-          let code = tryDecode(frame)
-          if (!code) code = tryDecode(rotateInto(frame, 90))
-          if (!code) code = tryDecode(rotateInto(frame, 270))
-          if (!code) code = tryDecode(rotateInto(frame, 180))
-
-          if (code) emit(code)
-        } catch {
-          // frame gagal diproses; lanjut
-        }
+        const code = tryDecode(frame)
+          ?? tryDecode(rotateInto(frame, 90))
+          ?? tryDecode(rotateInto(frame, 270))
+          ?? tryDecode(rotateInto(frame, 180))
+        if (code) emit(code)
         timerRef.current = window.setTimeout(loop, SCAN_INTERVAL_MS)
       }
 
@@ -251,14 +317,20 @@ export function useCameraScanner(onScan: (code: string) => void) {
       } else if (err.name === 'NotFoundError' || err.name === 'OverconstrainedError') {
         setState('unsupported')
         setError('Kamera tidak ditemukan pada perangkat ini.')
+      } else if (err.name === 'NotReadableError') {
+        setState('error')
+        setError('Kamera sedang dipakai aplikasi lain. Tutup aplikasi itu lalu coba lagi.')
       } else {
         setState('error')
-        setError(err.message || 'Kamera tidak dapat dimulai.')
+        setError('Kamera tidak dapat dimulai. Coba lagi atau ketik kode secara manual.')
       }
     }
   }, [deviceId])
 
   useEffect(() => () => { stop() }, [stop])
 
-  return { state, error, videoRef, start, stop, devices, deviceId, setDeviceId, lastDetected }
+  return {
+    state, error, videoRef, start, stop, devices, deviceId, setDeviceId, lastDetected,
+    focus, refocus, setManualFocus,
+  }
 }
