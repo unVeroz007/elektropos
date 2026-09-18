@@ -1,12 +1,16 @@
 import { Link } from 'react-router-dom'
 import { Card, SummaryRow } from '../../../components/ui'
 import { formatDateTime } from '../../../lib/numbers'
+import { useProfile } from '../../../lib/session'
+import { Collapsible } from '../common'
 import { CUSTODY, LOCATION, statusLabel } from '../labels'
 import { telHref } from '../logic'
 import type { TicketDetail } from '../types'
+import { canEditDetails, DetailsForm } from './DetailsForm'
 
 /** Ringkasan pelanggan & alat. Kontak tidak dikirim server untuk akun teknis. */
 export function SummaryCard({ ticket }: { ticket: TicketDetail }) {
+  const profile = useProfile()
   const c = ticket.customer
   const equipment = [ticket.equipment_type, ticket.equipment_brand, ticket.equipment_model].filter(Boolean).join(' · ')
   const mapLink = ticket.address?.match(/https?:\/\/\S+/)?.[0] ?? null
@@ -43,6 +47,11 @@ export function SummaryCard({ ticket }: { ticket: TicketDetail }) {
         <p>Keluhan kembali: {ticket.child_tickets.map((child, i) => (
           <span key={child.id}>{i > 0 && ', '}<Link to={`/servis/${child.id}`}>{child.number}</Link></span>
         ))}</p>
+      )}
+      {canEditDetails(ticket, profile) && (
+        <Collapsible title="Ubah data alat & keluhan">
+          <DetailsForm key={ticket.version} ticket={ticket} />
+        </Collapsible>
       )}
     </Card>
   )
