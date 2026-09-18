@@ -1,5 +1,8 @@
 # 06 — Kontrak RPC dan Penanganan Kegagalan
 
+
+> **Pembaruan 18 September 2026:** kontrak RPC yang sudah diimplementasikan dan diuji dijelaskan rinci di [penjualan](audit/kontrak-sales.md), [kas & pembelian](audit/kontrak-kas-pembelian.md), [servis](audit/kontrak-servis.md) dan [stok, laporan, foto](audit/kontrak-stok-laporan-foto.md). Bila berbeda dengan dokumen ini, kontrak tersebut yang berlaku karena sesuai kode dan uji.
+
 Baseline 1.1. Kontrak ini harus diwujudkan dalam fungsi/migrasi dan diuji; nama di bawah belum merupakan endpoint yang sudah tersedia. [Keamanan](04-ARCHITECTURE-SECURITY.md), [model data](05-DATA-MODEL.md), dan [aturan bisnis](02-BUSINESS-RULES.md) berlaku bersama.
 
 ## API-01 — Protokol umum

@@ -4,7 +4,26 @@ Versi landasan: **1.1**, 15 September 2026. Bahasa produk: Indonesia. Zona waktu
 
 ElektroPOS membantu satu toko listrik menjalankan penjualan, persediaan, servis di toko, dan kunjungan rumah. PC menjadi kasir utama; ayah dan developer dapat memantau lewat HP. Dokumen ini adalah pintu masuk pekerjaan manusia maupun AI.
 
-**Status saat ini: dokumentasi dan spesifikasi; aplikasi belum diimplementasikan atau diuji.** Kelengkapan dokumen tidak membuktikan aplikasi bebas kesalahan. Kesiapan operasional ditentukan oleh bukti pada kriteria penerimaan.
+**Status saat ini (18 September 2026): aplikasi terimplementasi dan lulus uji otomatis; belum UAT dengan pengguna dan perangkat nyata.** Hasil audit independen dan perbaikannya ada di [dokumen perbaikan audit](docs/audit/PERBAIKAN-AUDIT-2026-09.md). Kesiapan operasional tetap ditentukan oleh bukti pada kriteria penerimaan, termasuk uji printer/scanner/HP yang belum dilakukan.
+
+## Menjalankan dan menguji
+
+Prasyarat: Docker Desktop menyala, `npx supabase start`, `.env` berisi `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (hanya lokal, jangan di-commit).
+
+| Perintah | Fungsi |
+|---|---|
+| `npm run dev` | Aplikasi di http://localhost:5173 |
+| `npm run build` | Typecheck + build produksi |
+| `npm run typecheck` / `npm run lint` | TypeScript strict / ESLint |
+| `npm run test` | Uji unit & komponen (Vitest) |
+| `npm run test:db` | Uji penerimaan SQL di **database uji terpisah** `elektropos_test*`; database aplikasi tidak disentuh |
+| `npm run test:db:cash-concurrency` | Uji dua koneksi: tutup kas vs pembayaran |
+| `npm run setup:demo` | Akun & data contoh; menolak berjalan pada toko non-demo |
+| `npm run verify:flows` | Alur end-to-end via HTTP (nilai uang/stok, izin, foto Storage) pada data demo |
+| `npm run backup` / `npm run restore` | Backup lengkap (data, akun, foto) & pemulihan ke database kosong — lihat [OPS-04A](docs/08-OPERATIONS-RELEASE.md) |
+| `python scripts/validate_docs.py` | Struktur & keterlacakan dokumen |
+
+Kontrak RPC terbaru: [penjualan](docs/audit/kontrak-sales.md), [kas & pembelian](docs/audit/kontrak-kas-pembelian.md), [servis](docs/audit/kontrak-servis.md), [stok, laporan, foto](docs/audit/kontrak-stok-laporan-foto.md).
 
 ## Urutan membaca
 
@@ -35,7 +54,7 @@ Untuk AI pengembang yang baru masuk proyek, gunakan [prompt pertama siap tempel]
 - Untuk mulai mengembangkan: gunakan satu tahap dari rencana implementasi sebagai tugas; jangan memerintahkan AI menebak seluruh produk dari judul proyek.
 - Untuk mengubah aturan: perbarui dokumen pemilik aturan, keputusan terkait, PRD/kontrak jika terdampak, dan kasus uji. Jangan menyisipkan perubahan bisnis hanya di kode.
 - Untuk memeriksa dokumen: jalankan `python scripts/validate_docs.py` dari root proyek. Pemeriksaan ini memvalidasi tautan lokal, ID fitur/uji/keputusan, pemetaan fitur, dan arsip; bukan bukti kebenaran bisnis atau keamanan aplikasi.
-- Untuk memeriksa contoh angka: jalankan `python scripts/verify_spec_examples.py`. Ini memeriksa aritmetika spesifikasi secara independen dengan rasio eksak; bukan pengujian kode aplikasi/SQL yang belum dibuat.
+- Untuk memeriksa contoh angka: jalankan `python scripts/verify_spec_examples.py`. Ini memeriksa aritmetika spesifikasi secara independen dengan rasio eksak; pengujian kode aplikasi/SQL ada pada `npm run test` dan `npm run test:db`.
 - Untuk menilai rilis: gunakan checklist operasional dan hasil uji aktual. Jangan menandai lulus berdasarkan rencana pengujian saja.
 
 ## Arti status keputusan

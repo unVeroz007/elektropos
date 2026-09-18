@@ -35,46 +35,46 @@ Saat menambah FR, tambahkan definisi PRD, scope, aturan/API/data bila terkait, k
 
 ## Status bukti aktual
 
-Per 16 September 2026, implementasi berikut telah diuji dan PASS pada database PostgreSQL lokal (27 AT).
+Per 18 September 2026 (branch `fix/audit-menyeluruh`), setelah audit independen 17 September dan perbaikannya
+([dokumen perbaikan](audit/PERBAIKAN-AUDIT-2026-09.md)). Status lama 16 September dicabut: beberapa uji waktu itu
+mengesahkan bug (mis. AT-06 menerima potongan 6 m + 4 m sebagai 10 m).
 
-### P0 — Bootstrap & autentikasi
-- AT-01: owner login multi-perangkat, akun nonaktif ditolak, anon ditolak
-- AT-02: staff/maintainer ditolak write bisnis & baca modal via RPC langsung
+Bukti otomatis: `npm run test:db` (30 berkas SQL di database uji terpisah), `npm run test` (Vitest unit + komponen),
+`npm run verify:flows` (46 pemeriksaan HTTP pada Supabase lokal), `npm run test:db:cash-concurrency`, dua koneksi
+`psql` untuk stok terakhir, dan backup→restore ke database terpisah. **PASS** = dibuktikan uji otomatis;
+**SEBAGIAN** = logika terbukti, perangkat/pengguna nyata belum; **NOT_VERIFIED** = belum ada bukti.
 
-### P1 — Mesin hitung & persediaan
-- AT-03: barcode fisik terdaftar, duplikat ditolak, satuan presisi
-- AT-04: satuan meter dengan konversi dan harga per unit
-- AT-05: presisi 0.1 m × 10 kali sisa tepat 0, lot modal habis; qty 4 desimal ditolak
-- AT-06: roll segel 100m terverifikasi; sisa potongan tidak dianggap roll utuh
-- AT-11: INSUFFICIENT_STOCK saat stok habis
-- AT-14: lot/posisi/movement invariant terpenuhi
-- AT-15: stok awal idempoten (key sama = 1x posting); OPENING tidak membuat purchase payment
-- AT-16: transfer SHOP→FIELD, disposal, versi konflik ditolak
+| AT | Status | Bukti |
+|---|---|---|
+| AT-01 | SEBAGIAN | `p0_auth_access.sql`, JWT akun nonaktif ditolak semua RPC (`require_role`); login PC+HP bersamaan belum diuji di perangkat |
+| AT-02 | PASS | `p0_auth_access.sql`, `sales_*`, `service_guards.sql`, `report_period.sql`, `verify:flows` (diskon staff, jual oleh akun teknis, retur staff) |
+| AT-03 | PASS | `p4_barcode.sql`, `sales_catalog.sql` |
+| AT-04 | PASS | `sales_catalog.sql`, `p1_p2_extra.sql` |
+| AT-05 | PASS | `p1_p2_extra.sql`, `numbers.test.ts` |
+| AT-06 | PASS | `p1_at06.sql` (ditulis ulang), `sales_roll.sql`, `cart.test.ts`, `verify:flows` (SEGMENT_TOO_SHORT/NOT_SEALED) |
+| AT-07 | PASS | `sales_finalize.sql` (vektor BR-04), `cart.test.ts` |
+| AT-08 | PASS | `p2_price_changed.sql`, `sales_catalog.sql`, `cart.test.ts` (muat ulang harga) |
+| AT-09 | PASS | `sales_finalize.sql`, `verify:flows` (total, kembalian, saldo laci, stok) |
+| AT-10 | PASS | `sales_finalize.sql`, `verify:flows` (kirim ulang, konflik isi, `get_operation_v1`) |
+| AT-11 | PASS | `sales_finalize.sql`, dua koneksi paralel: satu nota, satu `INSUFFICIENT_STOCK`, stok akhir 0 |
+| AT-12 | SEBAGIAN | Data struk lengkap (`sales_read.sql`, `verify:flows`); cetak fisik 58/80 mm dan scanner/kamera nyata NOT_VERIFIED |
+| AT-13 | PASS | `sales_return.sql` (multi-lot, kumulatif, NONE, pecahan, T=0), `returns.test.ts`, `verify:flows` |
+| AT-14 | PASS | invariant ledger di `p1_p2_extra.sql`, `supplier_returns.sql`, restore (0 selisih) |
+| AT-15 | PASS | `p1_stock.sql`, `supplier_purchase.sql` |
+| AT-16 | PASS | `stock_mutations.sql`, `stock_count.sql`, `countModel.test.ts` |
+| AT-17 | PASS | `service_flow.sql`, `service_customers.sql`, `verify:flows` |
+| AT-18 | PASS | `service_guards.sql` (64 pasangan WF-05), `logic.test.ts` |
+| AT-19 | PASS | `service_parts.sql` (pakai + kembalikan part memulihkan stok & modal) |
+| AT-20 | PASS | `service_money.sql`, `verify:flows` (cicilan setelah final ditolak, kembalian server) |
+| AT-21 | PASS | `service_money.sql` |
+| AT-22 | PASS | `service_flow.sql`, `verify:flows` (serah terima ditolak sebelum tagihan & sebelum lunas) |
+| AT-23 | PASS | `service_flow.sql` |
+| AT-24 | PASS | `cash_sessions.sql`, `test:db:cash-concurrency`, `verify:flows` |
+| AT-25 | PASS | `cash_correct_payment.sql`, `cash_adjust_transfer.sql` |
+| AT-26 | PASS | `report_period.sql` (batas jam WIB, retur lintas bulan), `report_dashboard.sql`, `verify:flows` (staff tanpa modal) |
+| AT-27 | PASS | `report_export.sql`, `attach_storage.sql`, `verify:flows` (unggah foto ke Storage nyata, tanpa slot ditolak) |
+| AT-28 | SEBAGIAN | Blok bayar saat offline & hasil tak diketahui (`payment.test.ts`, `useCommand`); putus jaringan nyata NOT_VERIFIED |
+| AT-29 | PASS | `p4_setup_health.sql`; backup→restore SUCCEEDED ke database terpisah (baris, 78 RPC, foto, invariant); restore menolak database aplikasi & target tidak kosong |
+| AT-30 | SEBAGIAN | JS awal 174 KiB gzip (≤300, NFR-08); performa p95 dengan fixture besar dan uji pengguna senior NOT_VERIFIED |
 
-### P2 — Kasir & pembayaran
-- AT-07: diskon baris + diskon nota (BR-04 largest-remainder); sum alokasi = total
-- AT-08: PRICE_CHANGED saat versi satuan berubah, katalog dimuat ulang
-- AT-09: finalisasi tunai atomik, kembalian benar
-- AT-10: idempotensi operation_id (key+hash sama = 1 nota)
-- AT-13: retur parsial refund, stok/modal kembali sesuai alokasi asal
-- AT-24: kas laci sesuai BR-12, sesi buka/tutup, variance
-- AT-25: tutup kas + koreksi metode pembayaran
-
-### P3 — Servis
-- AT-17: tiket toko/onsite, custody, kontak wajib
-- AT-18: transisi status WF-05, estimasi PROPOSED→APPROVED, WORKING
-- AT-19: USE + REVERSE part, cost allocation tercatat
-- AT-20: DP, pelunasan, status UNPRICED/PAID
-- AT-21: refund_due 20rb, refund melebihi ditolak (BR-10)
-- AT-22: handover dengan nama penerima, closed_at atomik
-- AT-23: tiket keluhan kembali, tiket asal tidak berubah
-
-### P4 — Pengaturan & data
-- AT-03 tambahan: find_by_barcode satuan tepat, daftar/hapus barcode, idempoten
-- AT-26: laporan periode, staff tidak terima COGS
-- AT-27: CSV aman formula (prefix `'`), foto validasi mime/size, anon ditolak
-- AT-29: pengaturan toko checklist, validasi lebar struk, health per peran, backup manifest
-- AT-28: offline deteksi, draft quota handling
-
-### Verifikasi API (npm run verify:flows)
-22 alur via REST API: beranda, katalog, scan barcode, daftar barcode, sesi kas, jual, struk, riwayat, laporan, COGS tersembunyi, servis/tiket/transisi, pelanggan, pengaturan, kesehatan, keamanan anon.
+Belum ada: Playwright (alur browser, viewport HP/PC, cetak), UAT dengan ayah/karyawan, pemulihan ke instance Supabase kedua.

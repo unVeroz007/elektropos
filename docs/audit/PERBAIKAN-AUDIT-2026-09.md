@@ -80,3 +80,30 @@ Selisih uang kembali terhadap nilai klaim dicatat sebagai laba/rugi retur distri
 - R03 Indeks ganda cost_allocations; tanpa CHECK reversed ≤ alokasi.
 - R04 Dokumen: test:e2e, get_operation_v1, 11 RPC tak terdokumentasi; `allocateCost` mati.
 - R05 Fixture seed ikut ke DB aplikasi (`sql_paths` dikosongkan di fondasi).
+
+## Status penutupan (18 September 2026)
+
+Semua temuan di atas ditangani di branch `fix/audit-menyeluruh`. Bukti per kasus uji ada di
+[keterlacakan](../10-TRACEABILITY.md#status-bukti-aktual). Ringkas:
+
+| Temuan | Status | Bukti utama |
+|---|---|---|
+| K01–K02 | Tertutup | `require_role` di semua RPC; `verify:flows` (akun teknis/diskon staff ditolak) |
+| K03 | Tertutup | `private.date_range_input`; `report_period.sql` jam 00:00/00:30/13:30/23:59 WIB |
+| K04–K06 | Tertutup | `sales_finalize.sql`, `sales_roll.sql`, `sales_return.sql` (multi-lot COGS neto 0) |
+| K07–K09 | Tertutup | `service_flow.sql`, `service_money.sql`, `verify:flows` |
+| K10–K11 | Tertutup | trigger `cash_movements_guard`, `test:db:cash-concurrency`, `cash_correct_payment.sql` |
+| K12 | Tertutup | `list_service_tickets_v1` diperbaiki; UI menampilkan error (uji komponen) |
+| K13 | Tertutup | helper policy di schema `storage_access`; `verify:flows` unggah foto ke Storage nyata |
+| T01–T04 | Tertutup | `useCommand` + `get_operation_v1`, konfirmasi eksplisit, keranjang snapshot, draf maks 5 (uji Vitest) |
+| T05 | Tertutup | UI retur, estimasi/persetujuan, part, tagihan, pembayaran, serah terima, stok (pindah/koreksi/buang/hitung), kas, koreksi cara bayar, distributor |
+| T06–T08 | Tertutup | `service_guards.sql`, `sales_return.sql`, barang masuk satu posisi per roll |
+| T09 | Tertutup | `test:db` di database terpisah; backup lengkap + restore diverifikasi; `setup:demo` tanpa reset |
+| T10 | Tertutup | uji ditulis ulang dari aturan bisnis; `verify:flows` memeriksa nilai |
+| S01–S13 | Tertutup | lihat keterlacakan; S10 tampilan HP dirancang responsif tetapi belum diuji di perangkat |
+| R01–R05 | Tertutup | EXECUTE fungsi private dicabut; dokumen & perintah diperbarui; fixture tidak masuk DB aplikasi |
+
+Sisa yang belum terbukti (bukan kegagalan, belum ada perangkat/pengguna): cetak fisik 58/80 mm, scanner & kamera
+nyata, tampilan di HP nyata, putus jaringan nyata, performa fixture besar, UAT dengan ayah/karyawan, pemulihan ke
+instance Supabase kedua. Pengembalian fisik part servis setelah tagihan final belum tersedia (koreksi harga lewat
+nota kredit).

@@ -1,6 +1,6 @@
 # 07 — Pengujian dan Kriteria Penerimaan
 
-Baseline 1.1. Semua kasus berikut **belum dijalankan pada aplikasi**. Status awal NOT_RUN. Dokumen ini spesifikasi tes, bukan laporan lulus.
+Baseline 1.1. Dokumen ini spesifikasi tes, bukan laporan lulus. Status bukti aktual per kasus dicatat di [keterlacakan](10-TRACEABILITY.md#status-bukti-aktual).
 
 ## TEST-01 — Lapisan bukti
 
@@ -10,7 +10,7 @@ Baseline 1.1. Semua kasus berikut **belum dijalankan pada aplikasi**. Status awa
 - Hardware/UAT manual: scanner/printer asli, struk fisik, ayah/karyawan menjalankan tugas tanpa arahan langkah per langkah.
 - Operasional: backup+restore nyata ke lingkungan uji, kuota/performa dan recovery sesi.
 
-Runner pada tahap bootstrap menyediakan kontrak `npm run lint`, `npm run typecheck`, `npm run test`, `npm run test:db`, `npm run test:e2e`, `npm run build`. Saat ini script tersebut belum ada; jangan melaporkan hasilnya sebelum diimplementasikan.
+Runner yang tersedia: `npm run lint`, `npm run typecheck`, `npm run test` (Vitest unit + komponen jsdom), `npm run test:db` (PostgreSQL di database uji terpisah), `npm run test:db:cash-concurrency` (dua koneksi), `npm run verify:flows` (HTTP end-to-end pada data demo), `npm run build`. Playwright (`test:e2e`) **belum** dibuat; alur browser, viewport dan cetak masih NOT_VERIFIED.
 
 ## TEST-02 — Fixture
 
