@@ -95,11 +95,14 @@ begin
 end $$;
 
 -- Satuan roll utuh kabel: hanya dapat dijual dari roll yang masih bersegel (BR-03).
-insert into private.product_units(product_id, label, factor_base, sale_step, sell_price, is_default)
-select p.id, 'roll 100m', 100, 1, 780000, false
+insert into private.product_units(product_id, label, factor_base, sale_step, sell_price, is_default, whole_roll)
+select p.id, 'roll 100m', 100, 1, 780000, false, true
 from private.products p
 where p.sku = 'DEMO-KABEL-15'
   and not exists (select 1 from private.product_units u where u.product_id = p.id and u.label = 'roll 100m' and u.active);
+update private.product_units u set whole_roll = true
+from private.products p
+where p.id = u.product_id and p.sku = 'DEMO-KABEL-15' and u.label = 'roll 100m' and not u.whole_roll;
 
 -- Batas stok minimum contoh agar beranda menampilkan stok menipis.
 update private.products set min_stock = 5 where sku in ('DEMO-LAMPU-12W', 'DEMO-SAKLAR') and min_stock = 0;

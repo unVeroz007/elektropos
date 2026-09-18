@@ -23,9 +23,9 @@ $$;
 create function pg_temp.ticket(p_number text, p_status text, p_custody text, p_location text, p_scheduled timestamptz, p_closed timestamptz)
 returns uuid language sql as $$
   insert into private.service_tickets(number, mechanic_id, service_location, custody_location, equipment_type, complaint,
-    work_status, scheduled_at, closed_at, address)
+    work_status, scheduled_at, completed_at, closed_at, address)
   values (p_number, '11111111-1111-4111-8111-111111111111', p_location, p_custody, 'Mesin cuci', 'Bocor', p_status,
-    p_scheduled, p_closed, case when p_location = 'ONSITE' then 'Jl. Contoh 1' end)
+    p_scheduled, p_closed, p_closed, case when p_location = 'ONSITE' then 'Jl. Contoh 1' end)
   returning id
 $$;
 
@@ -51,6 +51,12 @@ begin
   perform pg_temp.ticket('SV-VISIT', 'INSPECTING', 'CUSTOMER', 'ONSITE', v_today + interval '10 hours', null);
   perform pg_temp.ticket('SV-VISIT-TMRW', 'NEW', 'CUSTOMER', 'ONSITE', v_today + interval '1 day 10 hours', null);
   perform pg_temp.ticket('SV-DONE', 'READY', 'CUSTOMER', 'STORE', null, now());
+  -- Piutang servis: diserahkan kemarin dengan sisa tagihan 150000 (tagihan 200000, dibayar 50000).
+  v_t := pg_temp.ticket('SV-OWED', 'READY', 'CUSTOMER', 'STORE', null, null);
+  update private.service_tickets set completed_at = v_today - interval '1 day', receivable_note = 'Bayar akhir bulan'
+    where id = v_t;
+  v_inv := pg_temp.inv('SV-OWED-INV', 'SERVICE', v_today - interval '1 day', 200000, v_t);
+  perform pg_temp.pay('IN', 'SERVICE_RECEIPT', 'CASH', 50000, v_today - interval '1 day', v_inv, v_t);
 
   -- Stok rendah: lampu min 5, stok 3; kabel min 0 tidak dihitung.
   update private.products set min_stock = 5 where id = 'a2000000-0000-4000-8000-000000000001';
@@ -87,6 +93,11 @@ begin
   end if;
   if (v->'service'->'active_by_status'->>'READY')::integer <> 1 or (v->'service'->>'active_total')::integer <> 3 then
     raise exception 'Dashboard: servis aktif salah %', v->'service';
+  end if;
+  if (v->'service'->>'receivable_count')::integer <> 1 or v->'service'->>'receivable_total' <> '150000'
+     or v->'service'->'receivables'->0->>'number' <> 'SV-OWED' or v->'service'->'receivables'->0->>'outstanding' <> '150000'
+     or v->'service'->'receivables'->0->>'note' <> 'Bayar akhir bulan' then
+    raise exception 'Dashboard: piutang servis salah %', v->'service';
   end if;
   if (v->>'low_stock')::integer <> 1 or v->'low_stock_items'->0->>'stock_shop' <> '3.000' then
     raise exception 'Dashboard: stok rendah salah %', v->'low_stock_items';

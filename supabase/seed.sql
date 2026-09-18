@@ -52,10 +52,10 @@ insert into private.products (id, sku, name, specification, base_unit, quantity_
   ('a2000000-0000-4000-8000-000000000002', 'KBL-NYA-1.5', 'Kabel NYA 1.5mm', 'Tembaga Engkel Red', 'm', 0.100, true, 'B-03');
 
 -- Product Units:
-insert into private.product_units (id, product_id, label, factor_base, sale_step, sell_price, is_default) values
-  ('a1000000-0000-4000-8000-000000000001', 'a2000000-0000-4000-8000-000000000001', 'pcs', 1.000, 1.000, 15000.000000, true),
-  ('a1000000-0000-4000-8000-000000000002', 'a2000000-0000-4000-8000-000000000002', 'm', 1.000, 0.100, 7500.000000, true),
-  ('a1000000-0000-4000-8000-000000000003', 'a2000000-0000-4000-8000-000000000002', 'roll 100m', 100.000, 1.000, 650000.000000, false);
+insert into private.product_units (id, product_id, label, factor_base, sale_step, sell_price, is_default, whole_roll) values
+  ('a1000000-0000-4000-8000-000000000001', 'a2000000-0000-4000-8000-000000000001', 'pcs', 1.000, 1.000, 15000.000000, true, false),
+  ('a1000000-0000-4000-8000-000000000002', 'a2000000-0000-4000-8000-000000000002', 'm', 1.000, 0.100, 7500.000000, true, false),
+  ('a1000000-0000-4000-8000-000000000003', 'a2000000-0000-4000-8000-000000000002', 'roll 100m', 100.000, 1.000, 650000.000000, false, true);
 
 -- Barcodes (termasuk kode dengan nol depan untuk AT-03):
 insert into private.product_barcodes (product_id, product_unit_id, code) values

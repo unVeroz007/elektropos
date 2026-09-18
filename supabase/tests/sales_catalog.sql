@@ -162,6 +162,48 @@ begin
     'rows', jsonb_build_array(v_rows->1), 'import_hash', 'h3'), 'INVALID_INPUT');
 end $$;
 
+-- Keputusan pemilik 18-09-2026: tanda roll utuh eksplisit per satuan, hanya untuk barang roll berisi > 1.
+do $$
+declare v_res jsonb; v_rows jsonb; v_pid uuid; v_unit uuid;
+begin
+  perform pg_temp.expect_error('owner', 'upsert_product_v1', pg_temp.product_in('{"sku":"ROLL-X","barcode":null,"whole_roll":true}'),
+    'INVALID_INPUT');
+  perform pg_temp.expect_error('owner', 'upsert_product_v1', pg_temp.product_in(jsonb_build_object('sku', 'ROLL-Y',
+    'barcode', null, 'base_unit', 'm', 'quantity_step', '0.1', 'track_segments', true, 'unit_label', 'm',
+    'factor_base', '1', 'sale_step', '0.1', 'whole_roll', true)), 'INVALID_INPUT');
+  perform pg_temp.expect_error('owner', 'upsert_product_v1', pg_temp.product_in('{"sku":"ROLL-Z","barcode":null,"whole_roll":"ya"}'),
+    'INVALID_INPUT');
+  v_res := pg_temp.call('owner', 'upsert_product_v1', pg_temp.product_in(jsonb_build_object('sku', 'ROLL-OK',
+    'barcode', null, 'base_unit', 'm', 'quantity_step', '1', 'track_segments', true, 'unit_label', 'roll 50m',
+    'factor_base', '50', 'sale_step', '1', 'sell_price', '400000', 'whole_roll', true)));
+  v_pid := (v_res->>'entity_id')::uuid;
+  v_unit := (v_res->>'unit_id')::uuid;
+  perform pg_temp.eq((select whole_roll from private.product_units where id = v_unit), true, 'satuan roll utuh tersimpan');
+  -- Mengubah tanda membuat versi satuan baru (keranjang lama ditolak dengan PRICE_CHANGED/versi).
+  v_res := pg_temp.call('owner', 'upsert_product_v1', pg_temp.product_in(jsonb_build_object('product_id', v_pid,
+    'expected_version', (v_res->>'version')::integer, 'sku', 'ROLL-OK', 'barcode', null, 'base_unit', 'm',
+    'quantity_step', '1', 'track_segments', true, 'unit_label', 'roll 50m', 'factor_base', '50', 'sale_step', '1',
+    'sell_price', '400000', 'whole_roll', false, 'reason', 'Dijual sebagai potongan')));
+  perform pg_temp.eq((v_res->>'unit_changed')::boolean, true, 'ubah tanda roll utuh = versi satuan baru');
+  perform pg_temp.eq((select whole_roll from private.product_units where id = (v_res->>'unit_id')::uuid), false, 'tanda baru');
+
+  v_rows := jsonb_build_array(
+    jsonb_build_object('sku', 'IMP-ROLL', 'name', 'Kabel impor', 'base_unit', 'm', 'quantity_step', '1',
+      'track_segments', 'true', 'unit_label', 'roll 100m', 'factor_base', '100', 'sale_step', '1', 'sell_price', '700000',
+      'whole_roll', 'true'),
+    jsonb_build_object('sku', 'IMP-PCS', 'name', 'Saklar impor', 'base_unit', 'pcs', 'quantity_step', '1',
+      'unit_label', 'pcs', 'factor_base', '1', 'sale_step', '1', 'sell_price', '7000', 'whole_roll', 'true'),
+    jsonb_build_object('sku', 'IMP-BAD', 'name', 'Salah', 'base_unit', 'pcs', 'quantity_step', '1',
+      'unit_label', 'pcs', 'factor_base', '1', 'sale_step', '1', 'sell_price', '7000', 'whole_roll', 'mungkin'));
+  v_res := pg_temp.call('owner', 'preview_catalog_import_v1', jsonb_build_object('rows', v_rows));
+  perform pg_temp.eq((select string_agg((e->>'line') || ':' || (e->>'code'), ',' order by e->>'line', e->>'code')
+    from jsonb_array_elements(v_res->'errors') e), '2:INVALID_WHOLE_ROLL,3:INVALID_WHOLE_ROLL', 'validasi whole_roll impor');
+  v_res := pg_temp.call('owner', 'commit_catalog_import_v1', jsonb_build_object('operation_id', gen_random_uuid(),
+    'rows', jsonb_build_array(v_rows->0), 'import_hash', 'roll'));
+  perform pg_temp.eq((select u.whole_roll from private.product_units u join private.products p on p.id = u.product_id
+    where p.sku = 'IMP-ROLL'), true, 'impor menyimpan roll utuh');
+end $$;
+
 -- Kategori.
 do $$
 declare v_a uuid; v_b uuid;

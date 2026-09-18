@@ -126,6 +126,29 @@ begin
   perform pg_temp.eq((select qty_base from private.invoice_items where invoice_id = v_inv), 100.000::numeric, 'qty dasar roll');
 end $$;
 
+-- Keputusan pemilik 18-09-2026: satuan isi > 1 yang bukan roll utuh (mis. "ikat 10m") dipotong dari satu potongan.
+do $$
+declare v_res jsonb; v_inv uuid;
+begin
+  insert into private.product_units(id, product_id, label, factor_base, sale_step, sell_price, is_default, whole_roll)
+  values ('a1000000-0000-4000-8000-0000000000a1', 'a2000000-0000-4000-8000-000000000002', 'ikat 10m', 10, 1, 70000, false, false);
+  perform pg_temp.expect_error('staff', 'finalize_sale_v1', pg_temp.sale_in(jsonb_build_array(jsonb_build_object(
+    'product_unit_id', 'a1000000-0000-4000-8000-0000000000a1', 'qty', '5', 'position_id', pg_temp.fx('P40')))),
+    'SEGMENT_TOO_SHORT');
+  v_res := pg_temp.call('staff', 'finalize_sale_v1', pg_temp.sale_in(jsonb_build_array(jsonb_build_object(
+    'product_unit_id', 'a1000000-0000-4000-8000-0000000000a1', 'qty', '2', 'position_id', pg_temp.fx('P60')))));
+  v_inv := (v_res->>'entity_id')::uuid;
+  perform pg_temp.eq(v_res->>'total', '140000', '2 ikat × Rp70.000');
+  perform pg_temp.eq(pg_temp.pos_qty('P60'), 40.000::numeric, 'potong 20 m dari potongan 60 m');
+  perform pg_temp.eq((select qty_base from private.invoice_items where invoice_id = v_inv), 20.000::numeric, 'qty dasar 2 × 10 m');
+  perform pg_temp.eq((select sum(ca.cost_amount) from private.cost_allocations ca join private.invoice_items ii
+    on ii.id = ca.invoice_item_id where ii.invoice_id = v_inv), 100000.000000::numeric, 'modal 20 m × Rp5.000');
+  -- Tanda roll utuh diteruskan ke kasir.
+  v_res := pg_temp.call('staff', 'get_product_v1', jsonb_build_object('product_id', 'a2000000-0000-4000-8000-000000000002'));
+  perform pg_temp.eq((select string_agg(e->>'label' || '=' || (e->>'whole_roll'), ',' order by e->>'label')
+    from jsonb_array_elements(v_res->'units') e), 'ikat 10m=false,m=false,roll 100m=true', 'whole_roll per satuan');
+end $$;
+
 -- Daftar posisi layak jual untuk UI.
 do $$
 declare v_res jsonb;
@@ -133,7 +156,7 @@ begin
   v_res := pg_temp.call('staff', 'list_sellable_positions_v1',
     jsonb_build_object('product_id', 'a2000000-0000-4000-8000-000000000002'));
   perform pg_temp.eq((select string_agg(e->>'label' || '=' || (e->>'qty_base') || '/' || (e->>'sealed'), ',' order by e->>'label')
-    from jsonb_array_elements(v_res->'positions') e), 'UJI-P40=40.000/false,UJI-P60=60.000/false,UJI-R100=97.500/false',
+    from jsonb_array_elements(v_res->'positions') e), 'UJI-P40=40.000/false,UJI-P60=40.000/false,UJI-R100=97.500/false',
     'hanya SHOP SALEABLE sisa > 0');
   perform pg_temp.assert(v_res->'positions'->0 ? 'version', 'versi posisi tersedia');
   perform pg_temp.assert(v_res::text not ilike '%cost%', 'tanpa modal');
