@@ -34,6 +34,8 @@ export type ProductSnapshot = {
   unitLabel: string
   unitVersion: number
   factorBase: string
+  /** Satuan ini dijual sebagai roll utuh bersegel (tanda satuan dari katalog, bukan tebakan faktor). */
+  wholeRoll: boolean
   saleStep: string
   sellPrice: string
 }
@@ -71,6 +73,7 @@ export function snapshotFromSearch(product: ProductSearchItem, unit: ProductUnit
     unitLabel: unit.label,
     unitVersion: unit.version,
     factorBase: unit.factor_base,
+    wholeRoll: product.track_segments && unit.whole_roll,
     saleStep: unit.sale_step,
     sellPrice: unit.sell_price,
   }
@@ -88,6 +91,7 @@ export function snapshotFromBarcode(found: Extract<BarcodeLookup, { found: true 
     unitLabel: found.unit_label,
     unitVersion: found.unit_version,
     factorBase: found.factor_base,
+    wholeRoll: found.track_segments && found.whole_roll,
     saleStep: found.sale_step,
     sellPrice: found.sell_price,
   }
@@ -104,9 +108,12 @@ export function rollPickFromPosition(position: SellablePosition): RollPick {
   }
 }
 
-/** Satuan roll utuh (mis. "roll 100 m"): faktor > 1 pada produk potongan. */
-export function isWholeRoll(line: Pick<CartLine, 'trackSegments' | 'factorBase'>): boolean {
-  return line.trackSegments && new Decimal(line.factorBase).greaterThan(1)
+/**
+ * Satuan roll utuh (mis. "roll 100 m") ditandai di katalog. Satuan berisi > 1 lainnya
+ * (mis. "ikat 10 m") dijual sebagai potongan dari satu roll/potongan.
+ */
+export function isWholeRoll(line: Pick<CartLine, 'trackSegments' | 'wholeRoll'>): boolean {
+  return line.trackSegments && line.wholeRoll
 }
 
 /** Jumlah awal saat barang ditambahkan: 1 bila sah menurut langkah jual, selain itu satu langkah. */
@@ -329,7 +336,8 @@ export function applyProductRefresh(lines: CartLine[], products: ProductDetail[]
     const replacement = activeUnits.find(u => u.label === line.unitLabel)
       ?? activeUnits.find(u => u.is_default) ?? activeUnits[0]
     if (!product || !replacement) return { ...line, unavailable: true }
-    const changedRoll = isWholeRoll(line) !== (product.track_segments && new Decimal(replacement.factor_base).greaterThan(1))
+    const wholeRoll = product.track_segments && replacement.whole_roll
+    const changedRoll = isWholeRoll(line) !== wholeRoll
     return {
       ...line,
       productName: product.name,
@@ -341,6 +349,7 @@ export function applyProductRefresh(lines: CartLine[], products: ProductDetail[]
       unitLabel: replacement.label,
       unitVersion: replacement.version,
       factorBase: replacement.factor_base,
+      wholeRoll,
       saleStep: replacement.sale_step,
       sellPrice: replacement.sell_price,
       position: changedRoll ? null : line.position,

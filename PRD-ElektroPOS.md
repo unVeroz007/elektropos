@@ -119,18 +119,18 @@ R1 online untuk finalisasi; draf disimpan lokal. Rupiah, zona waktu Asia/Jakarta
 - Part belum terpakai dikembalikan melalui transfer. Part yang telah terpakai hanya dikoreksi dengan kejadian reversal/kerusakan yang eksplisit.
 - Tidak ada penggunaan part dari produk fiktif atau stok negatif; part yang baru dibeli harus diterima dahulu.
 
-### FR-SRV-04 — Tagihan, DP dan pelunasan
+### FR-SRV-04 — Tagihan, pembayaran dan cicilan
 
-- DP opsional, dapat dicatat sebelum tagihan final; jumlah/metode/aktor/waktu/pemegang kas disimpan.
+- Tanpa uang muka: kerusakan dan part diperiksa dulu, tagihan dibuat dari hasil itu, baru pembayaran diterima (DEC-U04). Jumlah/metode/aktor/waktu/pemegang kas disimpan.
 - Tagihan final terdiri atas baris jasa, biaya kunjungan/pemeriksaan bila ada, dan part. Owner menetapkan/menyetujui tagihan.
-- Staff dapat menerima DP dan pelunasan nilai yang ditetapkan; tidak dapat mengubah biaya.
-- Beberapa pembayaran sebelum finalisasi boleh tercatat sebagai DP. Tidak ada fasilitas melunasi setelah layanan ditutup atau alat diserahkan.
-- Kelebihan DP menjadi kewajiban refund yang terlihat. Kasus batal/diagnosis diselesaikan owner tanpa DP otomatis hangus.
+- Staff dapat menerima pembayaran/cicilan sampai sisa tagihan; tidak dapat mengubah biaya.
+- Uang jasa boleh dicicil, termasuk setelah alat diserahkan dengan sisa tagihan atas keputusan owner (piutang servis). Tiket tertutup saat lunas.
+- Kelebihan bayar (mis. setelah nota kredit) menjadi kewajiban refund yang terlihat. Kasus batal/diagnosis diselesaikan owner tanpa uang otomatis hangus.
 
 ### FR-SRV-05 — Penyerahan dan keluhan kembali
 
 - Pengerjaan, tagihan, pembayaran dan penguasaan alat terpisah.
-- Penyerahan merekam penerima, petugas dan waktu; mensyaratkan hasil terminal, tagihan final, tidak ada sisa bayar/refund tertunda.
+- Penyerahan merekam penerima, petugas dan waktu; mensyaratkan hasil terminal, tagihan final, tidak ada refund tertunda, dan lunas — kecuali owner memutuskan menyerahkan dengan sisa tagihan beserta catatan (piutang servis).
 - Kunjungan tanpa titipan ditutup sebagai layanan selesai tanpa status Diambil palsu.
 - Keluhan kembali membuat tiket terkait tiket asal. Tidak mengubah riwayat lama atau otomatis menjanjikan garansi gratis.
 
@@ -157,7 +157,7 @@ R1 online untuk finalisasi; draf disimpan lokal. Rupiah, zona waktu Asia/Jakarta
 ### FR-RPT-02 — Laporan operasional
 
 - Filter rentang tanggal; ringkasan dihitung server berdasarkan Asia/Jakarta dan definisi aturan bisnis.
-- Pisahkan omzet barang, nilai tagihan servis, DP/penerimaan, refund, modal barang/part dan laba kotor.
+- Pisahkan omzet barang, nilai tagihan servis, penerimaan, piutang servis, refund, modal barang/part dan laba kotor.
 - Laba kotor hanya owner/maintainer; tidak dinyatakan sebagai laba bersih. Definisi COGS/servis/cancel mengikuti aturan bisnis.
 - Bukti penelusuran dari angka ringkasan ke catatan sumber tersedia. Semua hasil memperhitungkan reversal dan retur tanpa duplikasi.
 

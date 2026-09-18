@@ -152,19 +152,19 @@ Keluar `{ credit_note_id, document_number, total, payment, version }`.
 ### record_service_payment_v1 (OWNER/STAFF)
 ```json
 { "operation_id": "uuid", "ticket_id": "uuid", "payment_intent_id": "uuid (opsional)",
-  "purpose": "DEPOSIT | SETTLEMENT (opsional, divalidasi)",
+  "purpose": "SETTLEMENT (opsional; DEPOSIT ditolak)",
   "amount": "50000", "method": "CASH | TRANSFER | QRIS",
   "cashbox": "SHOP_DRAWER (default) | FATHER_WALLET (OWNER saja)", "tendered": "100000",
   "confirmed": true, "reference": "opsional", "expected_version": "opsional" }
 ```
-- Sebelum tagihan final: uang muka (boleh berkali-kali). Sesudah final: `amount` **tepat** = sisa (`PAYMENT_AMOUNT_MISMATCH`), lunas → `ALREADY_SETTLED`. Tiket tutup → `TICKET_CLOSED`.
+- Keputusan pemilik 18-09-2026: **tanpa uang muka**. Sebelum tagihan dibuat → `INVOICE_REQUIRED`. Sesudahnya boleh dicicil: 0 < `amount` ≤ sisa (`PAYMENT_AMOUNT_MISMATCH` bila melebihi); lunas → `ALREADY_SETTLED`. Tiket tertutup (lunas) → `TICKET_CLOSED`. Boleh juga pada layanan yang sudah selesai (piutang servis); pembayaran yang melunasi layanan selesai menutup tiket otomatis.
 - CASH: `tendered` wajib ≥ amount (`TENDERED_REQUIRED`/`INSUFFICIENT_TENDERED`); kembalian dihitung server; sesi kas OPEN dikunci (`CASH_SESSION_CLOSED`); `confirmed` tidak boleh dikirim.
 - TRANSFER/QRIS: `confirmed: true` wajib dari centang petugas (`CONFIRMATION_REQUIRED`); `cashbox`/`tendered` ditolak.
-- Keluar (untuk kuitansi): `{ payment_id, purpose, method, cashbox, amount, tendered, change, occurred_at, ticket_number, actor_name, payment: {status, invoice_total, invoice_net, net_received, outstanding, refund_due, ...}, version }`.
+- Keluar (untuk kuitansi): `{ payment_id, purpose, method, cashbox, amount, tendered, change, occurred_at, ticket_number, actor_name, payment: {status, invoice_total, invoice_net, net_received, outstanding, refund_due, ...}, closed_at, version }` (`closed_at` terisi bila pembayaran ini menutup tiket).
 
 ### refund_service_payment_v1 (OWNER)
 `{ operation_id, ticket_id, amount, method, cashbox? (CASH), confirmed (non-tunai), reference?, reason, expected_version? }`
-- Batas: `refund_due` (setelah final) atau seluruh uang diterima bila tiket CANCELLED tanpa tagihan final; selain itu `INVOICE_REQUIRED`.
+- Batas: `refund_due` (setelah final) atau seluruh uang muka lama bila tiket CANCELLED tanpa tagihan final; selain itu `INVOICE_REQUIRED`. Refund yang membuat tagihan pas lunas menutup layanan yang sudah selesai. `credit_service_invoice_v1` berlaku sama.
 - CASH: sesi terkunci, saldo sistem ≥ amount (`INSUFFICIENT_CASH`, coba lagi dengan operation_id sama setelah tambah dana).
 - Dialokasikan ke receipt yang masih bersaldo (terlama dulu, bisa beberapa receipt; receipt yang dikoreksi metode diganti receipt penggantinya).
 - Keluar `{ payment_id, amount, method, cashbox, allocations: [{payment_id, amount}], payment, version }`.
@@ -176,24 +176,27 @@ Rumus BR-10: `invoice_net = total − credit notes`; `net_received = Σ masuk �
 ## Penutupan
 
 ### handover_service_v1 (OWNER/STAFF)
-`{ operation_id, ticket_id, expected_version, receiver_name, condition_note?, accessories_note? }`
-Syarat: tiket terbuka, custody SHOP/FATHER (`INVALID_CUSTODY`), status akhir (`INVALID_TRANSITION`), tagihan final (`INVOICE_REQUIRED`), sisa 0 (`PAYMENT_OUTSTANDING`), refund_due 0 (`REFUND_DUE`). Lokasi selalu CUSTOMER (tidak dari klien).
-Efek atomik: custody CUSTOMER, `closed_at`, event custody `is_handover=true` + nama penerima. Keluar `{ custody_location, receiver_name, closed_at, version }`.
+`{ operation_id, ticket_id, expected_version, receiver_name, condition_note?, accessories_note?, allow_unpaid?, unpaid_note? }`
+Syarat: layanan belum selesai (`TICKET_COMPLETED`/`TICKET_CLOSED`), custody SHOP/FATHER (`INVALID_CUSTODY`), status akhir (`INVALID_TRANSITION`), tagihan final (`INVOICE_REQUIRED`), refund_due 0 (`REFUND_DUE`), sisa 0 (`PAYMENT_OUTSTANDING`) — kecuali `allow_unpaid: true` oleh OWNER (STAFF → `FORBIDDEN`) dengan `unpaid_note` ≥ 3 huruf (`REASON_REQUIRED`). Lokasi selalu CUSTOMER (tidak dari klien).
+Efek atomik: custody CUSTOMER, `completed_at`, `closed_at` hanya bila lunas (selain itu `receivable_note` = catatan, piutang servis), event custody `is_handover=true` + nama penerima; audit mencatat sisa tagihan. Keluar `{ custody_location, receiver_name, completed_at, closed_at, outstanding, version }`.
 
 ### close_onsite_service_v1 (OWNER)
-`{ operation_id, ticket_id, expected_version, completion_note? }` — custody harus CUSTOMER (alat tidak dititipkan), syarat tagihan/lunas sama dengan serah terima. Keluar `{ closed_at, version }`.
+`{ operation_id, ticket_id, expected_version, completion_note?, allow_unpaid?, unpaid_note? }` — custody harus CUSTOMER (alat tidak dititipkan), syarat tagihan/sisa/piutang sama dengan serah terima. Keluar `{ completed_at, closed_at, outstanding, version }`.
+
+Setelah layanan selesai, perintah pekerjaan (transisi, estimasi, part, tagihan, custody, jadwal, data tiket) → `TICKET_COMPLETED`; pembayaran, nota kredit, dan refund tetap dapat dicatat.
 
 ## Pembacaan
 
 ### list_service_tickets_v1
-`{ status?: "READY" | ["READY","WORKING"], query?: "nomor / nama / HP", include_closed?: false, not_picked_up?: false, service_location?, limit?: 25 (≤100), cursor? }`
+`{ status?: "READY" | ["READY","WORKING"], query?: "nomor / nama / HP", include_closed?: false, not_picked_up?: false, receivable?: false, service_location?, limit?: 25 (≤100), cursor? }`
+Default (tanpa `include_closed`) memuat tiket yang belum ditutup, termasuk piutang servis. `receivable: true` = hanya layanan selesai yang belum lunas.
 Urut terbaru. Keluar `{ items: [...], next_cursor: "string|null" }` (kirim `cursor` untuk halaman berikut). Item:
-`id, number, customer_id, customer_name, customer_phone, customer_alt_contact, equipment_type, equipment_brand, equipment_model, complaint (≤200), work_status, service_location, custody_location, scheduled_at, parent_ticket_id, created_at, closed_at, version, not_picked_up, payment_status, invoice_total (net), net_received, outstanding, refund_due`.
+`id, number, customer_id, customer_name, customer_phone, customer_alt_contact, equipment_type, equipment_brand, equipment_model, complaint (≤200), work_status, service_location, custody_location, scheduled_at, parent_ticket_id, created_at, closed_at, completed_at, receivable, version, not_picked_up, payment_status, invoice_total (net), net_received, outstanding, refund_due`.
 Pencarian HP menormalisasi (`+62 812…` = `0812…`).
 
 ### get_service_ticket_v1
 `{ ticket_id }` → tiket lengkap:
-`id, number, version, work_status, service_location, custody_location, equipment_*, complaint, initial_condition, accessories, address, scheduled_at, terminal_reason, test_result, created_at, closed_at, mechanic_name,
+`id, number, version, work_status, service_location, custody_location, equipment_*, complaint, initial_condition, accessories, address, scheduled_at, terminal_reason, test_result, created_at, closed_at, completed_at, receivable, receivable_note, mechanic_name,
 customer {id,name,phone,alternate_contact,address,version}, parent_ticket {id,number,work_status,...}, child_tickets [...], not_picked_up, allowed_transitions [...],
 approval {latest_revision, latest_status, active, approved_revision, approved_limit},
 status_events [{from_status,to_status,kind,reason,actor_name,occurred_at}], custody_events [{from_location,to_location,condition_note,accessories_note,receiver_name,is_handover,actor_name,occurred_at}],

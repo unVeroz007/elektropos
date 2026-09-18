@@ -52,7 +52,7 @@ UNKNOWN setelah timeout disimpan di Dexie bersama key/payload hash dan draf. Set
 | list_invoices_v1 | range, cursor, customer_id nullable | Staff dibatasi ringkasan pekerjaannya hari ini; lookup nomor tepat untuk cetak/pelunasan yang relevan tetap tersedia tanpa margin |
 | get_invoice_v1 | invoice_id atau number | Snapshot detail + payments/returns yang diizinkan, bukan semua kolom internal |
 | list_service_tickets_v1 | status/location/schedule/query, cursor | Status kerja, pembayaran derived, custody, kontak sesuai peran |
-| get_service_ticket_v1 | ticket_id | Riwayat, estimasi, part, tagihan, DP, lampiran melalui izin |
+| get_service_ticket_v1 | ticket_id | Riwayat, estimasi, part, tagihan, pembayaran, status selesai/piutang, lampiran melalui izin |
 | get_cash_session_v1 | session_id | Staff hanya drawer; owner semua; maintainer baca |
 | get_dashboard_v1 | date/range terbatas | Ringkasan sesuai role dan refreshed_at |
 | get_report_v1 | report_type, start/end, cursor bila detail | Agregasi server; max31 hari interaktif; privilege cost diperiksa |
@@ -108,7 +108,7 @@ Owner. Input original_payment_id, metode/pemegang yang benar, konfirmasi/alasan.
 | use_service_part_v1 | ticket_id, source position(s), qty, price draft | Owner; stock USE/cost allocation satu kali; guard approval dan status WORKING |
 | reverse_service_part_v1 | use_event_id, qty, condition/reason | Owner; sebelum invoice gunakan reversal biasa; sesudah invoice wajib jalur koreksi tertaut invoice dan recognition |
 | finalize_service_invoice_v1 | ticket_id, expected_version, charge lines, approved_estimate_revision | Owner; status terminal, biaya disepakati; invoice dan cost recognition saja, tidak mengurangi stok |
-| record_service_payment_v1 | ticket_id, payment_intent_id, amount, method, tendered/cash_session | Owner/staff; DP sebelum final, pembayaran seluruh sisa sesudah final; label sesuai status, cash sesuai pemegang |
+| record_service_payment_v1 | ticket_id, payment_intent_id, amount, method, tendered/cash_session | Owner/staff; hanya setelah tagihan dibuat, cicilan 0 < amount <= sisa (DEC-U04); label sesuai status, cash sesuai pemegang |
 | refund_service_payment_v1 | ticket_id, reason, receipt allocations, cash_session/method | Owner; batasi refund_due/excess yang sah; tidak mengurangi revenue tanpa credit note |
 | credit_service_invoice_v1 | invoice_id, line credits, physical part returns opsional, reason | Owner; kurangi invoice_net dengan credit note; cost hanya dibalik jika event part/qty yang benar dikembalikan; tidak otomatis refund dua kali |
 | transfer_service_custody_v1 | ticket_id, expected_version, location, condition/accessories | Owner untuk ambil/bawa; staff boleh intake SHOP saat NEW; handover melalui command khusus |

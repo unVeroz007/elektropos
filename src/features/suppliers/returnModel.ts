@@ -1,10 +1,12 @@
 import Decimal from 'decimal.js'
 import { formatQuantity, parseQuantity, rupiahOrNull } from '../../lib/numbers'
-import { buildItem, lineErrors, type IntakeLine } from '../stock/intakeModel'
+import { buildItem, lineErrors, newIntakeLine, withAutoRolls, type IntakeLine, type ProductLike } from '../stock/intakeModel'
 
 /**
  * Retur ke distributor (keputusan D5). Barang keluar stok menjadi klaim senilai modal
  * (dihitung server); klaim diselesaikan sekali: uang kembali, kredit, barang pengganti, atau ditolak.
+ * Keputusan pemilik 18-09-2026: retur distributor biasanya diganti barang, jadi "barang pengganti"
+ * menjadi pilihan utama dan diisi otomatis dengan barang & jumlah yang dikembalikan.
  */
 
 export type ReturnPick = {
@@ -61,8 +63,34 @@ export type SettleForm = {
   lines: IntakeLine[]
 }
 
+export const OUTCOMES: Outcome[] = ['REPLACEMENT', 'REFUND', 'CREDIT', 'REJECTED']
+
 export const EMPTY_SETTLE: SettleForm = {
-  outcome: 'REFUND', amount: '', method: 'CASH', cashbox: 'SHOP_DRAWER', confirmed: false, reference: '', note: '', lines: [],
+  outcome: 'REPLACEMENT', amount: '', method: 'CASH', cashbox: 'SHOP_DRAWER', confirmed: false, reference: '', note: '', lines: [],
+}
+
+/**
+ * Usulan barang pengganti: barang yang sama sejumlah yang dikembalikan (dijumlah per barang), dalam satuan
+ * stok bila ada satuan isi 1. Pengguna tetap dapat mengubah jumlah, satuan, dan pembagian roll.
+ */
+export function replacementLinesFor(
+  items: { product_id: string; qty_base: string }[],
+  products: ProductLike[],
+): IntakeLine[] {
+  const totals = new Map<string, Decimal>()
+  for (const item of items) totals.set(item.product_id, (totals.get(item.product_id) ?? new Decimal(0)).plus(item.qty_base))
+  const byId = new Map(products.map(p => [p.id, p]))
+  const lines: IntakeLine[] = []
+  for (const [productId, qtyBase] of totals) {
+    const product = byId.get(productId)
+    if (!product) continue
+    const active = product.units.filter(u => u.active !== false)
+    const baseUnit = active.find(u => new Decimal(u.factor_base).equals(1))
+    const line = newIntakeLine(product, baseUnit?.id)
+    const qty = qtyBase.dividedBy(line.factor)
+    lines.push(withAutoRolls({ ...line, qty: qty.isInteger() || baseUnit ? qty.toFixed() : '' }))
+  }
+  return lines
 }
 
 /** Payload penyelesaian sesuai hasil; field hasil lain tidak dikirim (server menolaknya). */

@@ -1,18 +1,20 @@
 import { useState, type FormEvent } from 'react'
-import { Card, ChoiceGroup, ConfirmDialog, ErrorMessage, Notice, TextArea, TextInput } from '../../../components/ui'
-import { formatDateTime } from '../../../lib/numbers'
+import { Card, Checkbox, ChoiceGroup, ConfirmDialog, ErrorMessage, Notice, TextArea, TextInput } from '../../../components/ui'
+import { formatDateTime, formatRupiah } from '../../../lib/numbers'
 import { permissions, useProfile, type Profile } from '../../../lib/session'
 import { useServiceCommand } from '../api'
 import { Button, Collapsible, CommandError } from '../common'
 import { CUSTODY } from '../labels'
-import { closeOnsiteBlockers, handoverBlockers, isoToShopLocal, shopLocalToIso } from '../logic'
+import {
+  closeOnsiteBlockers, handoverBlockers, isoToShopLocal, shopLocalToIso, unpaidAtCompletion, unpaidCompletionError,
+} from '../logic'
 import type { CommandResult, Custody, TicketDetail } from '../types'
 
 type Target = Exclude<Custody, 'CUSTOMER'>
 
 /** Tujuan pindah alat yang boleh untuk peran ini (server tetap memeriksa). */
 export function custodyTargets(ticket: TicketDetail, profile: Profile): Target[] {
-  if (ticket.closed_at) return []
+  if (ticket.completed_at) return []
   if (permissions.manageService(profile)) {
     return (['SHOP', 'FATHER'] as Target[]).filter(t => t !== ticket.custody_location)
   }
@@ -29,15 +31,20 @@ export function CustodyPanel({ ticket }: { ticket: TicketDetail }) {
   const profile = useProfile()
   const targets = custodyTargets(ticket, profile)
   const holdsDevice = ticket.custody_location !== 'CUSTOMER'
-  const canHandover = permissions.receiveService(profile) && holdsDevice && !ticket.closed_at
+  const canHandover = permissions.receiveService(profile) && holdsDevice && !ticket.completed_at
   const canCloseOnsite = permissions.manageService(profile) && ticket.service_location === 'ONSITE'
-    && !holdsDevice && !ticket.closed_at
-  const canReschedule = permissions.manageService(profile) && ticket.service_location === 'ONSITE' && !ticket.closed_at
+    && !holdsDevice && !ticket.completed_at
+  const canReschedule = permissions.manageService(profile) && ticket.service_location === 'ONSITE' && !ticket.completed_at
 
   return (
     <Card title="Keberadaan alat">
       <p className="srv-lead">Sekarang: <strong>{CUSTODY[ticket.custody_location]}</strong></p>
-      {ticket.closed_at && <Notice tone="success">Servis ditutup {formatDateTime(ticket.closed_at)}.</Notice>}
+      {ticket.closed_at && <Notice tone="success">Servis selesai dan lunas, ditutup {formatDateTime(ticket.closed_at)}.</Notice>}
+      {ticket.completed_at && !ticket.closed_at && (
+        <Notice tone="warning">
+          Layanan selesai {formatDateTime(ticket.completed_at)}. Tiket tertutup otomatis setelah sisa tagihan lunas.
+        </Notice>
+      )}
       {canHandover && <HandoverForm ticket={ticket} />}
       {canCloseOnsite && <CloseOnsiteForm ticket={ticket} />}
       {targets.length > 0 && (
@@ -90,15 +97,46 @@ function Blockers({ reasons, action }: { reasons: string[]; action: string }) {
   )
 }
 
+/**
+ * Sisa tagihan saat layanan diselesaikan (keputusan pemilik 18-09-2026): karyawan harus menagih dulu;
+ * pemilik boleh meneruskan sebagai piutang servis dengan catatan kapan dibayar.
+ */
+function useUnpaidChoice(ticket: TicketDetail) {
+  const profile = useProfile()
+  const outstanding = unpaidAtCompletion(ticket)
+  const isOwner = permissions.manageService(profile)
+  const [allowUnpaid, setAllowUnpaid] = useState(false)
+  const [note, setNote] = useState('')
+  const error = unpaidCompletionError({ outstanding, isOwner, allowUnpaid, note })
+  const payload = (): Record<string, unknown> =>
+    outstanding && allowUnpaid ? { allow_unpaid: true, unpaid_note: note.trim() } : {}
+  const fields = outstanding && isOwner ? (
+    <div className="srv-unpaid">
+      <Checkbox label={`Serahkan dengan sisa tagihan ${formatRupiah(outstanding)} (piutang servis)`}
+        hint="Hanya pemilik. Tiket tetap terbuka sampai sisa tagihan lunas."
+        checked={allowUnpaid} onChange={setAllowUnpaid} />
+      {allowUnpaid && (
+        <TextInput label="Kapan sisa tagihan dibayar?" value={note} onChange={setNote} required maxLength={500}
+          placeholder="mis. dibayar tanggal 25 saat gajian" />
+      )}
+    </div>
+  ) : null
+  const summary = outstanding && allowUnpaid
+    ? ` Sisa tagihan ${formatRupiah(outstanding)} dicatat sebagai piutang servis.`
+    : ' Tiket akan ditutup.'
+  return { outstanding, isOwner, error, payload, fields, summary }
+}
+
 function HandoverForm({ ticket }: { ticket: TicketDetail }) {
   const blockers = handoverBlockers(ticket)
+  const unpaid = useUnpaidChoice(ticket)
   const [receiver, setReceiver] = useState('')
   const [condition, setCondition] = useState('')
   const [accessories, setAccessories] = useState(ticket.accessories ?? '')
   const [touched, setTouched] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const command = useServiceCommand<CommandResult, Record<string, unknown>>('handover_service_v1')
-  const error = receiver.trim().length < 2 ? 'Tulis nama orang yang mengambil alat.' : null
+  const error = receiver.trim().length < 2 ? 'Tulis nama orang yang mengambil alat.' : unpaid.error
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -106,7 +144,9 @@ function HandoverForm({ ticket }: { ticket: TicketDetail }) {
     if (!error) setConfirming(true)
   }
   async function confirm() {
-    const payload: Record<string, unknown> = { ticket_id: ticket.id, expected_version: ticket.version, receiver_name: receiver.trim() }
+    const payload: Record<string, unknown> = {
+      ticket_id: ticket.id, expected_version: ticket.version, receiver_name: receiver.trim(), ...unpaid.payload(),
+    }
     if (condition.trim()) payload.condition_note = condition.trim()
     if (accessories.trim()) payload.accessories_note = accessories.trim()
     await command.run(payload)
@@ -114,6 +154,7 @@ function HandoverForm({ ticket }: { ticket: TicketDetail }) {
   }
 
   if (blockers.length > 0) return <Blockers reasons={blockers} action="Serah terima alat" />
+  if (unpaid.outstanding && !unpaid.isOwner) return <Blockers reasons={[unpaid.error ?? '']} action="Serah terima alat" />
   return (
     <form className="srv-subform" onSubmit={submit} noValidate>
       <p className="srv-subform-title">Serahkan alat ke pelanggan</p>
@@ -121,12 +162,13 @@ function HandoverForm({ ticket }: { ticket: TicketDetail }) {
         placeholder={ticket.customer?.name ?? ''} />
       <TextArea label="Kondisi saat diserahkan (opsional)" value={condition} onChange={setCondition} rows={2} maxLength={1000} />
       <TextArea label="Kelengkapan yang dikembalikan" value={accessories} onChange={setAccessories} rows={2} maxLength={1000} />
+      {unpaid.fields}
       {touched && error && <ErrorMessage error={error} />}
       <CommandError error={command.error} />
       <Button type="submit" large disabled={command.busy}>Serahkan alat</Button>
       <ConfirmDialog open={confirming} title="Serahkan alat?" confirmLabel="Ya, sudah diserahkan" busy={command.busy}
         onConfirm={() => void confirm()} onCancel={() => setConfirming(false)}>
-        <p>Alat {ticket.number} diserahkan kepada <strong>{receiver.trim()}</strong>. Tiket akan ditutup.</p>
+        <p>Alat {ticket.number} diserahkan kepada <strong>{receiver.trim()}</strong>.{unpaid.summary}</p>
       </ConfirmDialog>
     </form>
   )
@@ -134,25 +176,35 @@ function HandoverForm({ ticket }: { ticket: TicketDetail }) {
 
 function CloseOnsiteForm({ ticket }: { ticket: TicketDetail }) {
   const blockers = closeOnsiteBlockers(ticket)
+  const unpaid = useUnpaidChoice(ticket)
   const [note, setNote] = useState('')
+  const [touched, setTouched] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const command = useServiceCommand<CommandResult, Record<string, unknown>>('close_onsite_service_v1')
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    setTouched(true)
+    if (!unpaid.error) setConfirming(true)
+  }
   async function confirm() {
-    const payload: Record<string, unknown> = { ticket_id: ticket.id, expected_version: ticket.version }
+    const payload: Record<string, unknown> = { ticket_id: ticket.id, expected_version: ticket.version, ...unpaid.payload() }
     if (note.trim()) payload.completion_note = note.trim()
     await command.run(payload)
     setConfirming(false)
   }
   if (blockers.length > 0) return <Blockers reasons={blockers} action="Tutup kunjungan" />
   return (
-    <form className="srv-subform" onSubmit={event => { event.preventDefault(); setConfirming(true) }} noValidate>
+    <form className="srv-subform" onSubmit={submit} noValidate>
       <p className="srv-subform-title">Tutup kunjungan (alat tetap di rumah pelanggan)</p>
       <TextArea label="Catatan penyelesaian (opsional)" value={note} onChange={setNote} rows={2} maxLength={1000} />
+      {unpaid.fields}
+      {touched && unpaid.error && <ErrorMessage error={unpaid.error} />}
       <CommandError error={command.error} />
       <Button type="submit" large disabled={command.busy}>Tutup kunjungan</Button>
       <ConfirmDialog open={confirming} title="Tutup kunjungan?" confirmLabel="Ya, tutup" busy={command.busy}
         onConfirm={() => void confirm()} onCancel={() => setConfirming(false)}>
-        <p>Tiket {ticket.number} akan ditutup dan tidak bisa diubah lagi.</p>
+        <p>Pekerjaan tiket {ticket.number} dinyatakan selesai dan tidak bisa diubah lagi.{unpaid.summary}</p>
       </ConfirmDialog>
     </form>
   )

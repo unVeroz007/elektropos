@@ -34,9 +34,9 @@ Bukti: FR-POS-01/02/03/04, FR-CASH-01 bagian dasar, FR-RES-01; AT-08 sampai AT-1
 
 ## Tahap P3 — Servis toko dan kunjungan
 
-Keluaran: pelanggan, intake/status/estimate approval, custody, field parts, DP/final invoice/settlement, handover/onsite close, linked revisit. Owner HP dapat menyelesaikan kunjungan; staff menerima titipan/pembayaran sesuai peran.
+Keluaran: pelanggan, intake/status/estimate approval, custody, field parts, final invoice/pembayaran bertahap/piutang servis, handover/onsite close, linked revisit. Owner HP dapat menyelesaikan kunjungan; staff menerima titipan/pembayaran sesuai peran.
 
-Bukti: FR-SRV-01 sampai FR-SRV-05, FR-CUS-01; AT-17 sampai AT-23. Uji alur gagal/DP lebih besar/part tidak ditagih, bukan hanya servis berhasil normal.
+Bukti: FR-SRV-01 sampai FR-SRV-05, FR-CUS-01; AT-17 sampai AT-23. Uji alur gagal/kelebihan bayar/part tidak ditagih, bukan hanya servis berhasil normal.
 
 ## Tahap P4 — Pemantauan dan operasi
 

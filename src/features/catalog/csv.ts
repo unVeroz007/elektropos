@@ -5,7 +5,7 @@
 
 export const IMPORT_COLUMNS = [
   'sku', 'name', 'specification', 'base_unit', 'quantity_step', 'track_segments',
-  'unit_label', 'factor_base', 'sale_step', 'sell_price', 'barcode', 'shelf',
+  'unit_label', 'factor_base', 'sale_step', 'sell_price', 'barcode', 'shelf', 'whole_roll',
 ] as const
 
 export const REQUIRED_COLUMNS = ['sku', 'name', 'base_unit', 'quantity_step', 'unit_label', 'factor_base', 'sale_step', 'sell_price']
@@ -28,10 +28,11 @@ export const COLUMN_HELP: Record<(typeof IMPORT_COLUMNS)[number], string> = {
   sell_price: 'Harga jual Rupiah tanpa titik, mis. 15000 (wajib)',
   barcode: 'Barcode kemasan (boleh kosong)',
   shelf: 'Rak (boleh kosong)',
+  whole_roll: 'true bila satuan jual adalah roll utuh bersegel (mis. roll 100 m); kosong/false bila dipotong',
 }
 
 export function templateCsv(): string {
-  const example = ['LMP-010', 'Lampu LED', '10 Watt putih', 'pcs', '1', 'false', 'pcs', '1', '1', '15000', '8991234567890', 'A1']
+  const example = ['LMP-010', 'Lampu LED', '10 Watt putih', 'pcs', '1', 'false', 'pcs', '1', '1', '15000', '8991234567890', 'A1', 'false']
   return `\uFEFF${IMPORT_COLUMNS.join(',')}\r\n${example.join(',')}\r\n`
 }
 

@@ -46,6 +46,7 @@ export function TicketDetailPage({ ticketId }: { ticketId: string }) {
         <StatusBadge status={ticket.work_status} location={ticket.service_location} />
         <PaymentBadge status={ticket.payment.status} />
         {ticket.not_picked_up && <Badge tone="warning">Belum diambil</Badge>}
+        {ticket.receivable && <Badge tone="danger">Piutang servis</Badge>}
         {ticket.closed_at && <Badge tone="neutral">Sudah ditutup</Badge>}
       </div>
       <Notice tone="info"><strong>Langkah berikutnya:</strong> {nextStep(ticket)}</Notice>

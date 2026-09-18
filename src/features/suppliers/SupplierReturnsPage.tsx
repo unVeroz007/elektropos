@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import Decimal from 'decimal.js'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Badge, Card, Checkbox, ChoiceGroup, ConfirmDialog, EmptyState, ErrorMessage, Loading, Notice, PageHeader, QuantityInput,
   RupiahInput, Select, SummaryRow, TextArea, TextInput,
@@ -10,7 +10,7 @@ import {
   CASHBOX_LABEL, CONDITION_LABEL, LOCATION_LABEL, SUPPLIER_RETURN_OUTCOME_LABEL, SUPPLIER_RETURN_STATUS_LABEL, labelOf,
 } from '../../components/labels'
 import { ProductSearch } from '../../components/ProductSearch'
-import type { ProductSummary } from '../../components/productTypes'
+import type { ProductDetail, ProductSummary } from '../../components/productTypes'
 import { useDebounced } from '../../components/useDebounced'
 import { formatDateTime, formatQuantity, formatRupiah } from '../../lib/numbers'
 import { readRpc } from '../../lib/rpc'
@@ -19,9 +19,10 @@ import { useCommand } from '../../lib/useCommand'
 import { IntakeLineCard } from '../stock/IntakeLineCard'
 import { newIntakeLine, type IntakeLine } from '../stock/intakeModel'
 import { stockKeys, type Page, type StockPositionRow } from '../stock/api'
+import { catalogKeys } from '../catalog/api'
 import { supplierKeys, useSuppliers, type SupplierReturn } from './api'
 import {
-  createReturnPayload, EMPTY_SETTLE, pickIssue, settlementPreview, settlePayload,
+  createReturnPayload, EMPTY_SETTLE, OUTCOMES, pickIssue, replacementLinesFor, settlementPreview, settlePayload,
   type Outcome, type ReturnPick, type SettleForm,
 } from './returnModel'
 
@@ -131,15 +132,22 @@ function CreateReturnCard({ initialSupplierId, onDone }: { initialSupplierId: st
   )
 }
 
-function ReplacementLines({ lines, onChange }: { lines: IntakeLine[]; onChange: (lines: IntakeLine[]) => void }) {
-  const [units, setUnits] = useState<Record<string, Unit[]>>({})
+function ReplacementLines({ lines, initialUnits, onChange }: {
+  lines: IntakeLine[]
+  initialUnits: Record<string, Unit[]>
+  onChange: (lines: IntakeLine[]) => void
+}) {
+  const [units, setUnits] = useState<Record<string, Unit[]>>(initialUnits)
   function add(product: ProductSummary, unitId?: string) {
     setUnits(u => ({ ...u, [product.id]: product.units }))
     onChange([...lines, newIntakeLine(product, unitId)])
   }
   return (
     <div>
-      <p className="muted">Modal barang pengganti otomatis sama dengan nilai klaim, dibagi menurut jumlahnya.</p>
+      <p className="muted">
+        Terisi otomatis dengan barang dan jumlah yang dikembalikan. Ubah bila barang pengganti berbeda.
+        Modal barang pengganti otomatis sama dengan nilai klaim, dibagi menurut jumlahnya.
+      </p>
       {lines.map(line => (
         <IntakeLineCard key={line.key} line={line} units={units[line.productId] ?? []} withCost={false}
           onChange={next => onChange(lines.map(l => l.key === next.key ? next : l))}
@@ -153,6 +161,23 @@ function ReplacementLines({ lines, onChange }: { lines: IntakeLine[]; onChange: 
 function SettleCard({ item, onDone }: { item: SupplierReturn; onDone: () => void }) {
   const invalidate = useInvalidate()
   const [form, setForm] = useState<SettleForm>({ ...EMPTY_SETTLE, amount: new Decimal(item.claim_value).toDecimalPlaces(0, Decimal.ROUND_HALF_UP).toFixed(0) })
+  const [prefilled, setPrefilled] = useState(false)
+  const productIds = [...new Set(item.items.map(i => i.product_id))]
+  const products = useQueries({
+    queries: productIds.map(id => ({
+      queryKey: catalogKeys.detail(id),
+      queryFn: () => readRpc<ProductDetail>('get_product_v1', { product_id: id }),
+    })),
+  })
+  const loadedProducts = products.every(p => p.data) ? products.map(p => p.data as ProductDetail) : null
+  const productError = products.find(p => p.error)?.error ?? null
+  // Isi barang pengganti sekali setelah data barang termuat; perubahan pengguna tidak ditimpa.
+  useEffect(() => {
+    if (prefilled || !loadedProducts) return
+    setPrefilled(true)
+    setForm(f => (f.lines.length ? f : { ...f, lines: replacementLinesFor(item.items, loadedProducts) }))
+  }, [prefilled, loadedProducts, item.items])
+  const initialUnits = Object.fromEntries((loadedProducts ?? []).map(p => [p.id, p.units]))
   const [touched, setTouched] = useState(false)
   const [confirming, setConfirming] = useState(false)
   const command = useCommand<{ settlement_difference: string }, Record<string, unknown>>('settle_supplier_return_v1')
@@ -170,7 +195,7 @@ function SettleCard({ item, onDone }: { item: SupplierReturn; onDone: () => void
   return (
     <div className="subform">
       <ChoiceGroup<Outcome> label="Jawaban distributor" value={form.outcome} onChange={outcome => set({ outcome })}
-        options={(['REFUND', 'CREDIT', 'REPLACEMENT', 'REJECTED'] as Outcome[]).map(value => ({
+        options={OUTCOMES.map(value => ({
           value, label: labelOf(SUPPLIER_RETURN_OUTCOME_LABEL, value),
         }))} />
       {(form.outcome === 'REFUND' || form.outcome === 'CREDIT') && (
@@ -194,7 +219,11 @@ function SettleCard({ item, onDone }: { item: SupplierReturn; onDone: () => void
       {form.outcome !== 'REJECTED' && form.outcome !== 'REPLACEMENT' && (
         <TextInput label="Nomor referensi (boleh kosong)" value={form.reference} onChange={reference => set({ reference })} maxLength={100} />
       )}
-      {form.outcome === 'REPLACEMENT' && <ReplacementLines lines={form.lines} onChange={lines => set({ lines })} />}
+      {form.outcome === 'REPLACEMENT' && !prefilled && !productError && <Loading label="Menyiapkan barang pengganti…" />}
+      {form.outcome === 'REPLACEMENT' && <ErrorMessage error={productError} />}
+      {form.outcome === 'REPLACEMENT' && prefilled && (
+        <ReplacementLines lines={form.lines} initialUnits={initialUnits} onChange={lines => set({ lines })} />
+      )}
       <TextArea label={form.outcome === 'REJECTED' ? 'Alasan ditolak (wajib)' : 'Catatan (boleh kosong)'} value={form.note}
         onChange={note => set({ note })} rows={2} maxLength={500} />
       {preview && (

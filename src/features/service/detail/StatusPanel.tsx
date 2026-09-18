@@ -14,7 +14,7 @@ export function StatusPanel({ ticket }: { ticket: TicketDetail }) {
   const profile = useProfile()
   const [target, setTarget] = useState<WorkStatus | null>(null)
   if (!permissions.manageService(profile)) return null
-  const canCorrect = isTerminal(ticket.work_status) && !ticket.invoice && !ticket.closed_at
+  const canCorrect = isTerminal(ticket.work_status) && !ticket.invoice && !ticket.completed_at
   if (ticket.allowed_transitions.length === 0 && !canCorrect) return null
 
   return (

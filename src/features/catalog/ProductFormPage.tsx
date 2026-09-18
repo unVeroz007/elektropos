@@ -9,7 +9,7 @@ import {
 import type { ProductDetail } from '../../components/productTypes'
 import { catalogKeys, useCategories, useProduct } from './api'
 import {
-  buildProductPayload, EMPTY_FORM, formErrors, formFromProduct, KIND_PRESETS, unitChanged,
+  buildProductPayload, canBeWholeRoll, EMPTY_FORM, formErrors, formFromProduct, KIND_PRESETS, unitChanged,
   type ProductFormState, type ProductKind,
 } from './productForm'
 
@@ -88,6 +88,11 @@ function ProductForm({ product, onReload }: { product?: ProductDetail; onReload:
         </div>
         <Checkbox label="Lacak stok per roll/potongan (kabel, selang)" checked={form.track_segments}
           onChange={track_segments => update({ track_segments })} disabled={editing || kind !== 'OTHER'} />
+        {canBeWholeRoll(form) && (
+          <Checkbox label={`Dijual sebagai roll utuh bersegel (${form.unit_label || 'satuan'} hanya dari roll yang belum dibuka)`}
+            hint="Kosongkan bila satuan ini dipotong dari roll, mis. ikat 10 m."
+            checked={form.whole_roll} onChange={whole_roll => update({ whole_roll })} />
+        )}
         {priceChanged && (
           <Notice tone="warning">
             Harga/satuan berubah. Sistem membuat versi satuan baru; nota lama tetap memakai harga lama, dan

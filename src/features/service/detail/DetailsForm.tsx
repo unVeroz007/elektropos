@@ -19,7 +19,7 @@ const REQUIRED: EditableField[] = ['equipment_type', 'complaint']
  * tiket masih baru (kontrak server); kontak pelanggan diubah di menu Pelanggan.
  */
 export function canEditDetails(ticket: TicketDetail, profile: Profile): boolean {
-  if (ticket.closed_at || isTerminal(ticket.work_status)) return false
+  if (ticket.completed_at || isTerminal(ticket.work_status)) return false
   if (permissions.manageService(profile)) return true
   return permissions.receiveService(profile) && ticket.work_status === 'NEW'
 }

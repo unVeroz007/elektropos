@@ -31,6 +31,7 @@ Baseline 1.1. Acuan normatif rumus dan invariant; PRD menjelaskan kebutuhan, dok
 - Roll baru 100 m menjadi satu posisi panjang 100, segel utuh. Potong 2,5 m dari posisi itu menyisakan 97,5 m dan membuka segel.
 - Permintaan satu potongan 10 m memerlukan satu posisi dengan sisa >=10 m. Sisa 6 m dan 4 m tidak dianggap memenuhi satu potongan 10 m. Jika pelanggan menerima dua potongan, catat dua baris/segment allocation eksplisit.
 - Penjualan satu roll utuh memerlukan posisi segel utuh dengan kapasitas yang sesuai. Meter total yang cukup tidak membuktikan ada roll utuh.
+- "Roll utuh" adalah tanda eksplisit pada satuan jual (`whole_roll`), bukan tebakan dari isi satuan. Satuan berisi lebih dari satu tanpa tanda itu (mis. ikat 10 m) dijual sebagai potongan `qty × isi` dari satu posisi (DEC-U04).
 - Potongan yang dikembalikan adalah posisi baru, tidak disambungkan secara sistem ke roll asal. Retur roll boleh kembali bersegel hanya setelah pemeriksaan owner.
 - Untuk qty jual lebih dari satu roll, sediakan satu posisi per roll. Pembelian yang berisi banyak roll dapat menghasilkan posisi berlabel otomatis, diperiksa saat penerimaan.
 - Posisi dapat berpindah SHOP/FIELD_FATHER. Posisi fisik yang sama tidak dapat berada di dua tempat; transfer sebagian menghasilkan posisi baru pada tujuan dan mengurangi posisi asal.
@@ -87,8 +88,8 @@ Jika S=0: D wajib 0, seluruh a_i dan N_i=0. Invariant: `sum(a_i)=D`, `sum(N_i)=T
 - Untuk CASH: `tendered >= T`; `change = tendered - T`; receipt.amount=T, cash movement=T. Jangan menghitung tendered sebagai omzet atau uang bersih masuk. T=0 memakai invoice tanpa receipt dan alasan owner.
 - TRANSFER/QRIS: amount=T, change=0, confirmation oleh petugas wajib. Referensi pembayaran opsional; jangan klaim validasi bank otomatis.
 - Tidak ada pembayaran barang kurang dari total, pembayaran campuran, atau sisa utang. Metode non-tunai tidak mengubah saldo cashbox.
-- Kuitansi servis merupakan payment event terpisah dari invoice; beberapa DP diperbolehkan sebelum invoice final. Sesudah invoice final, pembayaran berikutnya harus menutup seluruh sisa (bukan mencicil setelah penyerahan).
-- Pembayaran servis tunai memakai amount sebesar DP/sisa yang dicatat, tendered>=amount dan change=tendered-amount; cash inflow=amount. Transfer/QRIS amount harus sesuai DP yang dipilih atau sisa final, tanpa kembalian.
+- Kuitansi servis merupakan payment event terpisah dari invoice. Tanpa uang muka: pembayaran servis diterima setelah invoice SERVICE dibuat, boleh beberapa kali (cicilan) dengan amount <= sisa tagihan (DEC-U04).
+- Pembayaran servis tunai: tendered>=amount dan change=tendered-amount; cash inflow=amount. Transfer/QRIS tanpa kembalian dan wajib konfirmasi petugas.
 - `net_received = sum(incoming) - sum(outgoing_refunds)` pada target tagihan/tiket. Jangan kurangi transfer antar cashbox karena bukan refund pelanggan.
 - Setiap refund dialokasikan ke receipt asal; total refund terhadap receipt tidak melebihi amount. Refund tidak disimpan sebagai nominal negatif pada receipt asli.
 - Salah metode bayar yang sudah posted dikoreksi dengan reversal pembayaran dan catatan pengganti terotorisasi dalam satu operasi; tidak mengubah invoice/stok. Cash session tertutup memakai koreksi saat ini, tidak mengubah riwayat tutup.
@@ -117,21 +118,23 @@ Jika S=0: D wajib 0, seluruh a_i dan N_i=0. Invariant: `sum(a_i)=D`, `sum(N_i)=T
 - Pengecualian persetujuan biaya: jika tidak ada pekerjaan berbayar yang dikerjakan/disepakati dan owner membebaskan seluruh biaya pada penyelesaian batal/tidak berhasil, invoice0 boleh tanpa approved_estimate_revision dengan alasan pembebasan wajib. Ini bukan izin memulai WORKING tanpa persetujuan atau menagih biaya yang belum disetujui.
 - Sesudah invoice final, perubahan biaya melalui credit note/koreksi tertaut. Menambah pekerjaan baru menjadi tiket terkait; tidak mengedit diam-diam invoice final.
 
-## BR-10 — DP, pelunasan dan refund servis
+## BR-10 — Pembayaran, cicilan, piutang dan refund servis
 
-- Sebelum invoice final, tampilan `total belum ditentukan` dapat berdampingan dengan DP. Jangan menampilkan Lunas hanya karena DP=estimasi sementara.
+- Tidak ada uang muka (DEC-U04). Sebelum invoice final pembayaran ditolak; layar menampilkan `tagihan belum dibuat`. Uang muka yang tercatat sebelum keputusan ini tetap dihitung sebagai penerimaan tiket dan dapat dikembalikan bila batal.
 - Sesudah final: `outstanding = max(invoice_net - net_received,0)` dan `refund_due = max(net_received - invoice_net,0)`. Invoice_net mencakup credit note yang sah.
 - Status derived: UNPRICED sebelum final; UNPAID/PARTIAL/PAID/REFUND_DUE sesudah final. Invoice 0 dengan net_received 0 menjadi PAID setelah owner menetapkan nol secara eksplisit.
-- Penyelesaian batal: owner menetapkan biaya yang disepakati, memfinalisasi tagihan, kemudian mengembalikan kelebihan DP. Tidak ada DP otomatis hangus; dispute dicatat, penutupan tetap menunggu penyelesaian.
-- Refund kelebihan DP tidak mengurangi pendapatan karena DP belum menjadi invoice. Refund akibat pengurangan tagihan final memerlukan credit note terlebih dahulu; jangan menghitung dua kali penurunan pendapatan.
-- Kuitansi DP/pelunasan memuat tiket, nilai diterima, total final jika ada, sisa/refund_due, metode, petugas dan waktu.
-- Penutupan layanan/penyerahan memerlukan outstanding=0 dan refund_due=0; unpaid finished work tetap bisa terlihat siap secara teknis tetapi belum bisa ditutup.
+- Cicilan: setiap pembayaran 0 < amount <= outstanding; melebihi sisa ditolak. Status PARTIAL sampai lunas.
+- Penyelesaian batal: owner menetapkan biaya yang disepakati (boleh 0 dengan alasan pembebasan) dan memfinalisasi tagihan. Kelebihan bayar (mis. setelah credit note) wajib dikembalikan; tidak ada uang yang otomatis hangus.
+- Refund akibat pengurangan tagihan final memerlukan credit note terlebih dahulu; jangan menghitung dua kali penurunan pendapatan.
+- Kuitansi pembayaran/cicilan/pelunasan memuat tiket, nilai diterima, total tagihan, sisa/refund_due, metode, petugas dan waktu.
+- Layanan **selesai** (`completed_at`) saat alat diserahkan atau kunjungan ditutup; tiket **ditutup** (`closed_at`) hanya bila outstanding=0 dan refund_due=0. Menyelesaikan layanan dengan outstanding>0 hanya boleh oleh owner dengan catatan kapan dibayar; sisa itu menjadi **piutang servis** yang tampil di beranda/daftar sampai lunas. refund_due>0 selalu menahan penyelesaian.
+- Setelah layanan selesai, pekerjaan/part/estimasi/custody tidak dapat diubah; pembayaran, credit note dan refund tetap dapat dicatat. Tiket tertutup otomatis saat pembayaran/credit note/refund membuat tagihan pas lunas.
 
 ## BR-11 — Penguasaan alat dan pengulangan servis
 
 - `custody_location` CUSTOMER/SHOP/FATHER adalah keberadaan fisik, berbeda dari service_location STORE/ONSITE.
 - Pembayaran tidak mengubah custody. Handover oleh petugas berizin mencatat penerima/waktu dan memindahkan ke CUSTOMER.
-- Kunjungan tanpa membawa alat tidak membutuhkan handover. Close setelah syarat terminal/tagihan/lunas terpenuhi dan custody CUSTOMER.
+- Kunjungan tanpa membawa alat tidak membutuhkan handover. Close setelah syarat terminal/tagihan terpenuhi dan custody CUSTOMER; sisa tagihan mengikuti BR-10 (piutang atas keputusan owner).
 - Label belum diambil berlaku pada terminal work_status dengan custody SHOP/FATHER, termasuk batal/tidak bisa diperbaiki; bukan sekadar tagihan belum lunas.
 - Keluhan kembali membuat tiket baru dengan parent_ticket_id. Tidak mengubah hasil pekerjaan lama. Garansi gratis hanya keputusan owner per kasus.
 
@@ -140,7 +143,7 @@ Jika S=0: D wajib 0, seluruh a_i dan N_i=0. Invariant: `sum(a_i)=D`, `sum(N_i)=T
 - Cashbox SHOP_DRAWER dan FATHER_WALLET; satu sesi OPEN per cashbox. Staff hanya dapat menerima/mengeluarkan uang sesuai izin pada SHOP_DRAWER; owner dapat memakai keduanya.
 - Posting pembayaran tunai wajib mengacu sesi cashbox terbuka milik lokasi penerima. Pembayaran non-tunai tidak membutuhkan sesi kas.
 - Pengeluaran tunai (refund/pembelian/transfer/biaya) tidak boleh melebihi saldo sistem cashbox setelah lock; lakukan penambahan/transfer dana sah lebih dahulu atau pilih metode non-tunai yang benar-benar digunakan. Cek saldo aplikasi bukan bukti jumlah uang fisik; operator tetap memeriksa uang nyata.
-- Saldo seharusnya = saldo buka + semua cash inflow - semua cash outflow. Pembelian tunai, refund, biaya, penarikan dan transfer keluar mengurangi; DP tunai menambah.
+- Saldo seharusnya = saldo buka + semua cash inflow - semua cash outflow. Pembelian tunai, refund, biaya, penarikan dan transfer keluar mengurangi; pembayaran pelanggan tunai (termasuk cicilan servis) menambah.
 - Transfer wallet->drawer membutuhkan dua sesi terbuka dan menghasilkan dua cash movements satu grup, atomik, total bersih nol. Tidak menambah omzet atau penerimaan pelanggan.
 - Sesi memiliki tanggal operasional saat dibuka. Penutupan setelah lewat tengah malam tetap menutup sesi yang sama; laporan periode pembayaran memakai occurred_at lokal, laporan sesi memakai session_id. Jangan mencampurkan keduanya.
 - Staff dapat mencatat hitungan tutup drawer; owner meninjau selisih. `variance = counted - expected`. Penutupan tidak otomatis menambahkan adjustment atau membuat expected menjadi counted.
@@ -152,7 +155,7 @@ Jika S=0: D wajib 0, seluruh a_i dan N_i=0. Invariant: `sum(a_i)=D`, `sum(N_i)=T
 |---|---|
 | Penjualan barang neto | Invoice SALE posted pada periode dikurangi credit note SALE posted pada periode |
 | Nilai jasa/servis neto | Invoice SERVICE posted pada periode dikurangi credit note SERVICE posted pada periode |
-| Penerimaan pelanggan | Receipt SALE/SERVICE incoming berdasarkan waktu pembayaran; rincian DP dipisah |
+| Penerimaan pelanggan | Receipt SALE/SERVICE incoming berdasarkan waktu pembayaran; uang muka lama (sebelum tagihan) dipisah |
 | Refund pelanggan | Payment outgoing kategori refund berdasarkan waktu refund |
 | Penerimaan bersih | Penerimaan pelanggan - refund pelanggan; bukan omzet dan bukan kas laci |
 | Koreksi metode pembayaran | Pasangan PAYMENT_REVERSAL/REPLACEMENT pada periode koreksi, net total nol; dipisahkan dari penerimaan/refund pelanggan nyata |

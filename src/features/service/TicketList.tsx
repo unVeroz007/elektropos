@@ -11,7 +11,7 @@ import { isPositive } from './logic'
 import type { ServiceLocation, TicketListItem } from './types'
 import { useDebounced } from '../../components/useDebounced'
 
-type FilterKey = 'active' | 'new' | 'approval' | 'working' | 'ready' | 'not_picked' | 'all'
+type FilterKey = 'active' | 'new' | 'approval' | 'working' | 'ready' | 'not_picked' | 'receivable' | 'all'
 
 const FILTERS: { value: FilterKey; label: string; filters: TicketFilters }[] = [
   { value: 'active', label: 'Semua yang masih berjalan', filters: {} },
@@ -20,6 +20,7 @@ const FILTERS: { value: FilterKey; label: string; filters: TicketFilters }[] = [
   { value: 'working', label: 'Dikerjakan / menunggu part', filters: { status: ['WORKING', 'WAITING_PARTS'] } },
   { value: 'ready', label: 'Siap diambil / selesai dikerjakan', filters: { status: ['READY'] } },
   { value: 'not_picked', label: 'Belum diambil pelanggan', filters: { not_picked_up: true } },
+  { value: 'receivable', label: 'Piutang servis (sudah diserahkan, belum lunas)', filters: { receivable: true } },
   { value: 'all', label: 'Semua, termasuk yang sudah ditutup', filters: { include_closed: true } },
 ]
 
@@ -103,6 +104,7 @@ function TicketCard({ ticket }: { ticket: TicketListItem }) {
         <strong>{ticket.number}</strong>
         <StatusBadge status={ticket.work_status} location={ticket.service_location} />
         {ticket.not_picked_up && <Badge tone="warning">Belum diambil</Badge>}
+        {ticket.receivable && <Badge tone="danger">Piutang {formatRupiah(ticket.outstanding)}</Badge>}
         {ticket.closed_at && <Badge tone="neutral">Sudah ditutup</Badge>}
       </div>
       <div className="srv-ticket-main">
@@ -113,7 +115,7 @@ function TicketCard({ ticket }: { ticket: TicketListItem }) {
       <div className="srv-ticket-meta">
         <span>{LOCATION[ticket.service_location]}</span>
         <span>{CUSTODY[ticket.custody_location]}</span>
-        {ticket.service_location === 'ONSITE' && ticket.scheduled_at && !ticket.closed_at && (
+        {ticket.service_location === 'ONSITE' && ticket.scheduled_at && !ticket.completed_at && (
           <span>Jadwal: {formatDateTime(ticket.scheduled_at)}</span>
         )}
         <span>Masuk: {formatDateTime(ticket.created_at)}</span>

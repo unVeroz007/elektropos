@@ -52,8 +52,11 @@ Uji: `supabase/tests/sales_*.sql`, `p1_at06.sql`, `p1_p2_extra.sql`.
   `percent`: `"0"`–`"100"` maks 4 desimal. `amount`: Rupiah bulat. Diskon > nilai → `INVALID_INPUT`.
 - **Roll (`track_segments=true`)**: setiap baris WAJIB `position_id` dari `list_sellable_positions_v1`
   (tanpa → `POSITION_REQUIRED`). Satu baris = satu potongan fisik. Dua potongan = dua baris.
-  - Satuan dengan `factor_base > 1` (mis. "roll 100m") = **roll utuh**: `qty` harus `"1"`, posisi harus bersegel
-    dengan kapasitas = faktor, dan tidak dipakai baris lain.
+  - Satuan bertanda `whole_roll: true` (mis. "roll 100m") = **roll utuh**: `qty` harus `"1"`, posisi harus bersegel
+    dengan kapasitas = faktor, dan tidak dipakai baris lain. Tanda ada di `units[]` hasil `search_products_v1`/
+    `get_product_v1` dan di `find_by_barcode_v1`; diatur lewat `upsert_product_v1.whole_roll` / kolom impor `whole_roll`
+    (hanya barang roll dengan faktor > 1, selain itu `INVALID_INPUT`; mengubahnya membuat versi satuan baru).
+  - Satuan isi > 1 tanpa tanda itu (mis. "ikat 10m") = potongan `qty × faktor` dari satu posisi (keputusan 18-09-2026).
   - Satuan meter: jumlah semua baris pada posisi itu ≤ sisa posisi, selain itu `SEGMENT_TOO_SHORT`.
     Memotong roll bersegel membuka segelnya.
   - Barang bulk yang mengirim `position_id` → `INVALID_INPUT`.

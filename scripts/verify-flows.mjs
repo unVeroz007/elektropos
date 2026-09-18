@@ -120,6 +120,7 @@ async function main() {
   const piece = positions.positions.find(p => !p.sealed)
   const sealed = positions.positions.find(p => p.sealed)
   check('ada potongan terbuka dan roll bersegel', Boolean(piece && sealed))
+  check('satuan roll utuh ditandai eksplisit, satuan meter tidak', rollUnit?.whole_roll === true && meter?.whole_roll === false)
   // Pratinjau sengaja tidak memeriksa stok; aturan potongan ditegakkan saat finalisasi (tanpa efek bila ditolak).
   const tooLong = await rpc(staff, 'finalize_sale_v1', {
     operation_id: uid(), client_reference_id: uid(), payment: { method: 'QRIS', confirmed: true },
@@ -167,7 +168,7 @@ async function main() {
   })
   check('retur 0,5 pcs ditolak (T07)', !pcsFraction.ok, pcsFraction.message)
 
-  section('Servis: alur lengkap sampai serah terima')
+  section('Servis: tanpa uang muka, cicilan, piutang, serah terima')
   const ticket = await must(staff, 'create_service_ticket_v1', {
     operation_id: uid(), customer_name: 'VERIFY Pelanggan', customer_phone: '081200001111',
     equipment_type: 'TV', complaint: 'Tidak menyala', initial_condition: 'Casing baik', service_location: 'STORE',
@@ -193,6 +194,10 @@ async function main() {
   })
   const earlyHandover = await rpc(staff, 'handover_service_v1', { operation_id: uid(), ticket_id: ticketId, expected_version: await version(), receiver_name: 'Pelanggan' })
   check('serah terima sebelum tagihan ditolak (K07)', earlyHandover.code === 'INVOICE_REQUIRED', earlyHandover.message)
+  const deposit = await rpc(staff, 'record_service_payment_v1', {
+    operation_id: uid(), ticket_id: ticketId, amount: '50000', method: 'QRIS', confirmed: true,
+  })
+  check('tanpa uang muka: bayar sebelum tagihan ditolak', deposit.code === 'INVOICE_REQUIRED', deposit.message)
   const overLimit = await rpc(owner, 'finalize_service_invoice_v1', {
     operation_id: uid(), ticket_id: ticketId, expected_version: await version(), approved_estimate_revision: 1,
     charge_lines: [{ kind: 'LABOR', description: 'Jasa', quantity: '1', unit_price: '5000000' }],
@@ -203,16 +208,32 @@ async function main() {
     charge_lines: [{ kind: 'LABOR', description: 'Ganti kapasitor', quantity: '1', unit_price: '80000' }],
   })
   check('tagihan final 80.000', n(serviceInvoice.total) === 80000)
-  const partial = await rpc(staff, 'record_service_payment_v1', {
+  const partial = await must(staff, 'record_service_payment_v1', {
     operation_id: uid(), ticket_id: ticketId, amount: '50000', method: 'CASH', tendered: '50000',
   })
-  check('cicilan setelah tagihan final ditolak', partial.code === 'PAYMENT_AMOUNT_MISMATCH', partial.message)
-  const paid = await must(staff, 'record_service_payment_v1', {
-    operation_id: uid(), ticket_id: ticketId, amount: '80000', method: 'CASH', tendered: '100000',
+  check('cicilan 50.000 diterima, sisa 30.000', partial.payment.status === 'PARTIAL' && n(partial.payment.outstanding) === 30000)
+  const overpay = await rpc(staff, 'record_service_payment_v1', {
+    operation_id: uid(), ticket_id: ticketId, amount: '30001', method: 'QRIS', confirmed: true,
   })
-  check('pelunasan tunai: kembalian dihitung server', n(paid.change) === 20000 && paid.payment.status === 'PAID')
-  const handover = await must(staff, 'handover_service_v1', { operation_id: uid(), ticket_id: ticketId, expected_version: await version(), receiver_name: 'VERIFY Pelanggan' })
-  check('serah terima setelah lunas', handover.custody_location === 'CUSTOMER' && Boolean(handover.closed_at))
+  check('bayar melebihi sisa ditolak', overpay.code === 'PAYMENT_AMOUNT_MISMATCH', overpay.message)
+  const staffUnpaid = await rpc(staff, 'handover_service_v1', {
+    operation_id: uid(), ticket_id: ticketId, expected_version: await version(), receiver_name: 'VERIFY Pelanggan',
+    allow_unpaid: true, unpaid_note: 'Bayar besok',
+  })
+  check('karyawan tidak bisa menyerahkan dengan sisa tagihan', staffUnpaid.code === 'FORBIDDEN', staffUnpaid.message)
+  const handover = await must(owner, 'handover_service_v1', {
+    operation_id: uid(), ticket_id: ticketId, expected_version: await version(), receiver_name: 'VERIFY Pelanggan',
+    allow_unpaid: true, unpaid_note: 'VERIFY sisa dibayar besok',
+  })
+  check('pemilik menyerahkan dengan sisa 30.000 (piutang), tiket belum tertutup',
+    handover.custody_location === 'CUSTOMER' && Boolean(handover.completed_at) && !handover.closed_at && n(handover.outstanding) === 30000)
+  const ownerDashboard = await must(owner, 'get_dashboard_v1', {})
+  check('beranda menampilkan piutang servis', ownerDashboard.service.receivables.some(r => r.ticket_id === ticketId && n(r.outstanding) === 30000))
+  const paid = await must(staff, 'record_service_payment_v1', {
+    operation_id: uid(), ticket_id: ticketId, amount: '30000', method: 'CASH', tendered: '50000',
+  })
+  check('pelunasan piutang: kembalian dihitung server, tiket tertutup',
+    n(paid.change) === 20000 && paid.payment.status === 'PAID' && Boolean(paid.closed_at))
 
   section('Foto tiket lewat Storage nyata (K13)')
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64')

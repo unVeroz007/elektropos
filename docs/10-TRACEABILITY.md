@@ -51,7 +51,7 @@ Bukti otomatis: `npm run test:db` (30 berkas SQL di database uji terpisah), `npm
 | AT-03 | PASS | `p4_barcode.sql`, `sales_catalog.sql` |
 | AT-04 | PASS | `sales_catalog.sql`, `p1_p2_extra.sql` |
 | AT-05 | PASS | `p1_p2_extra.sql`, `numbers.test.ts` |
-| AT-06 | PASS | `p1_at06.sql` (ditulis ulang), `sales_roll.sql`, `cart.test.ts`, `verify:flows` (SEGMENT_TOO_SHORT/NOT_SEALED) |
+| AT-06 | PASS | `p1_at06.sql` (ditulis ulang), `sales_roll.sql` (termasuk satuan ikat 10 m tanpa tanda roll utuh), `sales_catalog.sql` (tanda `whole_roll`), `cart.test.ts`, `productForm.test.ts`, `verify:flows` (SEGMENT_TOO_SHORT/NOT_SEALED, tanda satuan) |
 | AT-07 | PASS | `sales_finalize.sql` (vektor BR-04), `cart.test.ts` |
 | AT-08 | PASS | `p2_price_changed.sql`, `sales_catalog.sql`, `cart.test.ts` (muat ulang harga) |
 | AT-09 | PASS | `sales_finalize.sql`, `verify:flows` (total, kembalian, saldo laci, stok) |
@@ -65,9 +65,9 @@ Bukti otomatis: `npm run test:db` (30 berkas SQL di database uji terpisah), `npm
 | AT-17 | PASS | `service_flow.sql`, `service_customers.sql`, `verify:flows` |
 | AT-18 | PASS | `service_guards.sql` (64 pasangan WF-05), `logic.test.ts` |
 | AT-19 | PASS | `service_parts.sql` (pakai + kembalikan part memulihkan stok & modal) |
-| AT-20 | PASS | `service_money.sql`, `verify:flows` (cicilan setelah final ditolak, kembalian server) |
-| AT-21 | PASS | `service_money.sql` |
-| AT-22 | PASS | `service_flow.sql`, `verify:flows` (serah terima ditolak sebelum tagihan & sebelum lunas) |
+| AT-20 | PASS | `service_flow.sql`, `service_money.sql`, `logic.test.ts`, `verify:flows` (bayar sebelum tagihan ditolak, cicilan, melebihi sisa ditolak, kembalian server) |
+| AT-21 | PASS | `service_money.sql` (nota kredit ->refund lintas receipt, batal tanpa tagihan, uang muka lama) |
+| AT-22 | PASS | `service_flow.sql`, `service_money.sql`, `logic.test.ts`, `verify:flows` (serah terima sebelum tagihan ditolak; sisa tagihan hanya owner; piutang tampil di beranda; lunas menutup tiket) |
 | AT-23 | PASS | `service_flow.sql` |
 | AT-24 | PASS | `cash_sessions.sql`, `test:db:cash-concurrency`, `verify:flows` |
 | AT-25 | PASS | `cash_correct_payment.sql`, `cash_adjust_transfer.sql` |

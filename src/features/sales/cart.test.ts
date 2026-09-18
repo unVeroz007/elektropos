@@ -8,13 +8,15 @@ import type { ProductDetail } from './types'
 
 const lamp: ProductSnapshot = {
   productId: 'p-lamp', productName: 'Lampu LED 12W', specification: '', baseUnit: 'pcs', quantityStep: '1',
-  trackSegments: false, unitId: 'u-lamp', unitLabel: 'pcs', unitVersion: 1, factorBase: '1', saleStep: '1', sellPrice: '18000',
+  trackSegments: false, unitId: 'u-lamp', unitLabel: 'pcs', unitVersion: 1, factorBase: '1', wholeRoll: false, saleStep: '1', sellPrice: '18000',
 }
 const cableMeter: ProductSnapshot = {
   productId: 'p-cable', productName: 'Kabel NYA', specification: '1,5 mm', baseUnit: 'm', quantityStep: '0.1',
-  trackSegments: true, unitId: 'u-m', unitLabel: 'm', unitVersion: 1, factorBase: '1', saleStep: '0.1', sellPrice: '7500',
+  trackSegments: true, unitId: 'u-m', unitLabel: 'm', unitVersion: 1, factorBase: '1', wholeRoll: false, saleStep: '0.1', sellPrice: '7500',
 }
-const cableRoll: ProductSnapshot = { ...cableMeter, unitId: 'u-roll', unitLabel: 'roll 100m', factorBase: '100', saleStep: '1', sellPrice: '650000' }
+const cableRoll: ProductSnapshot = { ...cableMeter, unitId: 'u-roll', unitLabel: 'roll 100m', factorBase: '100', wholeRoll: true, saleStep: '1', sellPrice: '650000' }
+/** Keputusan pemilik 18-09-2026: satuan isi > 1 tanpa tanda roll utuh dijual sebagai potongan. */
+const cableBundle: ProductSnapshot = { ...cableMeter, unitId: 'u-ikat', unitLabel: 'ikat 10m', factorBase: '10', saleStep: '1', sellPrice: '70000' }
 
 const roll = (patch: Partial<RollPick>): RollPick => ({ id: 'r1', label: 'R-01', qtyBase: '100', capacity: '100', sealed: true, version: 1, ...patch })
 const line = (snapshot: ProductSnapshot, key: string, patch: Partial<CartLine> = {}): CartLine => ({
@@ -80,6 +82,13 @@ describe('roll & potongan (BR-03, bukti audit K05)', () => {
     const sealed = line(cableRoll, 'b', { position: roll({}) })
     expect(lineIssue(sealed, [sealed])).toBeNull()
   })
+  it('satuan berisi 10 m tanpa tanda roll utuh dipotong dari satu potongan', () => {
+    expect(isWholeRoll(cableBundle)).toBe(false)
+    const fits = line(cableBundle, 'a', { qtyText: '2', position: roll({ id: 'p60', qtyBase: '60', sealed: false }) })
+    expect(lineIssue(fits, [fits])).toBeNull()
+    const tooLong = line(cableBundle, 'b', { qtyText: '7', position: roll({ id: 'p60', qtyBase: '60', sealed: false }) })
+    expect(lineIssue(tooLong, [tooLong])).toContain('tidak bisa disambung')
+  })
   it('roll yang dijual utuh tidak boleh dipotong di baris lain', () => {
     const whole = line(cableRoll, 'a', { position: roll({}) })
     const cut = line(cableMeter, 'b', { qtyText: '2', position: roll({}) })
@@ -116,7 +125,7 @@ describe('PRICE_CHANGED', () => {
     id: 'p-lamp', name: 'Lampu LED 12W', specification: '', base_unit: 'pcs', quantity_step: '1', track_segments: false, active, units,
   })
   const unit = (patch: Partial<ProductDetail['units'][number]>) => ({
-    id: 'u-lamp', label: 'pcs', factor_base: '1', sale_step: '1', sell_price: '18000', is_default: true, version: 1, active: true, ...patch,
+    id: 'u-lamp', label: 'pcs', factor_base: '1', sale_step: '1', sell_price: '18000', is_default: true, whole_roll: false, version: 1, active: true, ...patch,
   }) as ProductDetail['units'][number]
 
   it('baris memakai satuan baru dan menandai harga lama untuk diperiksa', () => {

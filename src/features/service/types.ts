@@ -35,6 +35,9 @@ export type TicketListItem = {
   parent_ticket_id: string | null
   created_at: string
   closed_at: string | null
+  /** Alat diserahkan / kunjungan ditutup. Tanpa closed_at berarti masih ada sisa tagihan (piutang). */
+  completed_at: string | null
+  receivable: boolean
   version: number
   not_picked_up: boolean
   payment_status: PaymentStatus
@@ -182,6 +185,9 @@ export type TicketDetail = {
   test_result: string | null
   created_at: string
   closed_at: string | null
+  completed_at: string | null
+  receivable: boolean
+  receivable_note: string | null
   mechanic_name: string | null
   customer: CustomerRef | null
   parent_ticket: { id: string; number: string; work_status: WorkStatus; created_at: string; closed_at: string | null } | null
@@ -219,6 +225,8 @@ export type PaymentResult = CommandResult & {
   ticket_number: string
   actor_name: string | null
   payment: PaymentState
+  /** Terisi bila pembayaran ini melunasi layanan yang sudah selesai (tiket tertutup). */
+  closed_at: string | null
 }
 
 export type CustomerSearchRow = CustomerRef & { open_tickets: number; last_ticket_at: string | null }

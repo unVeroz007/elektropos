@@ -97,6 +97,19 @@ export function DashboardPage() {
             </ul>
           </>
         )}
+        {service.receivable_count > 0 && (
+          <>
+            <h3>Piutang servis ({service.receivable_count}) · {formatRupiah(service.receivable_total)}</h3>
+            <ul className="plain-list">
+              {service.receivables.map(t => (
+                <li key={t.ticket_id}>
+                  <Link to={`/servis/${t.ticket_id}`}>{t.number}</Link> · {t.customer_name ?? '-'}
+                  {' '}· sisa {formatRupiah(t.outstanding)}{t.note ? ` · ${t.note}` : ''}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         {service.scheduled_today.length > 0 && (
           <>
             <h3>Kunjungan hari ini</h3>

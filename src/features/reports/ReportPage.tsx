@@ -86,7 +86,9 @@ export function ReportPage() {
           <Card title="Uang dari pelanggan">
             <SummaryRow label="Uang masuk" value={formatRupiah(r.customer_receipts.total)} />
             <MethodRows values={r.customer_receipts.by_method} />
-            <SummaryRow label="Termasuk uang muka servis (DP)" value={formatRupiah(r.customer_receipts.deposit_total)} />
+            {!new Decimal(r.customer_receipts.deposit_total).isZero() && (
+              <SummaryRow label="Termasuk uang muka servis (data lama)" value={formatRupiah(r.customer_receipts.deposit_total)} />
+            )}
             <SummaryRow label="Uang dikembalikan ke pelanggan" value={`−${formatRupiah(r.customer_refunds.total)}`} tone="danger" />
             <SummaryRow strong label="Uang masuk bersih" value={formatRupiah(r.net_customer_receipts)} />
             {!new Decimal(r.payment_corrections.reversal_total).isZero() && (

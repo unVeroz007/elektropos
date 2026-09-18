@@ -14,7 +14,7 @@ Target akhir September tidak berarti seluruh daftar v1.0 harus dimasukkan. Semua
 - Produk/SKU/variasi, barcode fisik, pencarian, satuan/konversi, pecahan, roll utuh dan potongan yang dapat dibedakan.
 - Penerimaan pembelian lunas tanpa wajib PO, supplier sederhana, stok awal, transfer part ke ayah, pemakaian, penyesuaian, stok opname terbatas.
 - Keranjang/draf, diskon oleh owner, pembayaran lunas barang tunai/transfer/QRIS manual, struk/cetak ulang, retur sebagian dan refund.
-- Servis di toko/rumah, jadwal/alamat, estimasi/persetujuan, ongkos fleksibel, part, DP opsional, pelunasan, penyerahan, dan keluhan kembali yang tertaut.
+- Servis di toko/rumah, jadwal/alamat, estimasi/persetujuan, ongkos fleksibel, part, pembayaran setelah tagihan dibuat (boleh dicicil), piutang servis atas keputusan pemilik, penyerahan, dan keluhan kembali yang tertaut.
 - Pelanggan seperlunya, foto kondisi alat privat, ringkasan HP, laporan transaksi/penerimaan/laba kotor sederhana, ekspor CSV.
 - Kas laci dan kas dibawa ayah, tutup hari, audit, backup, restore, pantauan kuota, penanganan koneksi gagal, pengujian perangkat nyata.
 
@@ -22,8 +22,8 @@ Target akhir September tidak berarti seluruh daftar v1.0 harus dimasukkan. Semua
 
 | Fitur | Alasan/batas |
 |---|---|
-| Cicilan, Bayar Nanti, piutang pelanggan | Pengguna meminta tidak dibuat; DP sebelum finalisasi servis tetap termasuk |
-| Tempo supplier, PO bertahap kompleks, retur pembelian ke supplier | Kebijakan belum ditetapkan; penerimaan lunas dan koreksi stok bertanda alasan sudah termasuk |
+| Cicilan, Bayar Nanti, piutang untuk penjualan barang | Barang tetap lunas saat transaksi. Servis memakai aturan DEC-U04 |
+| Tempo supplier, PO bertahap kompleks | Kebijakan belum ditetapkan; penerimaan lunas, koreksi stok bertanda alasan, dan retur ke distributor (DEC-U04) sudah termasuk |
 | OCR label/nota dan scan kamera | Scanner fisik yang diminta; tidak diperlukan untuk pembukaan |
 | Finalisasi transaksi offline/sinkronisasi penjualan offline | Default desain R1 online; draf lokal tetap termasuk |
 | Tarif/masa garansi otomatis | Kebijakan belum ditentukan; keluhan kembali dapat dicatat |
@@ -44,7 +44,15 @@ PC sudah ada. Ayah dan satu karyawan kurang terbiasa teknologi. Ayah dan develop
 
 ### DEC-U02 — Cara usaha
 
-Menjual barang listrik dengan variasi dan potongan; ayah mekanik untuk servis toko dan panggilan rumah. Biaya menurut kerusakan/kesulitan setiap pekerjaan. DP boleh ada/tidak. Cicilan/utang pelanggan tidak dibuat.
+Menjual barang listrik dengan variasi dan potongan; ayah mekanik untuk servis toko dan panggilan rumah. Biaya menurut kerusakan/kesulitan setiap pekerjaan. Penjualan barang tidak memakai cicilan/utang; aturan uang servis diperbarui pada DEC-U04.
+
+### DEC-U04 — Keputusan pemilik 18 September 2026
+
+- Karyawan boleh membuka dan menutup laci toko; karyawan boleh melihat omzet/penerimaan tanpa modal dan laba.
+- Pembelian barang boleh dibayar tunai dari kas. Produksi awal memakai Supabase lokal di PC toko.
+- Barang retur dikembalikan ke distributor dan **biasanya diganti barang**; uang kembali, potong tagihan, dan ditolak tetap dapat dicatat.
+- Satuan berisi lebih dari satu (mis. roll 100 m, ikat 10 m) **tidak otomatis** berarti roll utuh bersegel. Kabel dapat dijual per meter, per roll, atau satuan lain; hanya satuan yang ditandai "roll utuh" yang wajib diambil dari roll bersegel.
+- Servis **tanpa uang muka**: kerusakan dan part yang harus diganti diperiksa dulu, tagihan dibuat dari hasil itu, lalu pembayaran diterima. Uang jasa **boleh dicicil**. Pemilik boleh menyerahkan alat atau menutup kunjungan dengan sisa tagihan (piutang servis) disertai catatan; tiket tertutup otomatis saat lunas.
 
 ### DEC-U03 — Biaya dan waktu
 
@@ -64,7 +72,7 @@ React/TypeScript/Vite; Tailwind/shadcn seperlunya; Router, TanStack Query, React
 
 ### DEC-D03 — Izin bisnis
 
-Owner menetapkan harga, diskon, penerimaan barang, penyesuaian, retur, refund, dan penutupan tagihan servis. Staff menjual dengan harga berlaku, menerima servis/DP/pelunasan yang telah ditentukan, mencetak, serta menyerahkan barang yang sudah boleh diserahkan. Rincian pada arsitektur.
+Owner menetapkan harga, diskon, penerimaan barang, penyesuaian, retur, refund, penutupan tagihan servis, dan penyerahan alat dengan sisa tagihan. Staff menjual dengan harga berlaku, menerima servis dan pembayaran/cicilan tagihan yang telah ditentukan, mencetak, serta menyerahkan alat yang sudah lunas. Rincian pada arsitektur.
 
 ### DEC-D04 — Hitungan
 
@@ -76,7 +84,7 @@ Tidak ada stok negatif atau override stok. Modal per lot penerimaan; pemilihan F
 
 ### DEC-D06 — Kas dan pembayaran
 
-Barang harus lunas saat transaksi selesai. Satu metode bayar per pembayaran; pembayaran campuran untuk satu penjualan barang ditunda. Servis boleh beberapa DP lalu pelunasan; setelah tagihan final harus lunas sebelum penyerahan/penutupan layanan. Kas ayah saat kunjungan dipisah dari laci toko.
+Barang harus lunas saat transaksi selesai. Satu metode bayar per pembayaran; pembayaran campuran untuk satu penjualan barang ditunda. Servis dibayar setelah tagihan dibuat dan boleh dicicil (DEC-U04); penyerahan/penutupan layanan dengan sisa tagihan hanya atas keputusan owner dan tercatat sebagai piutang servis. Kas ayah saat kunjungan dipisah dari laci toko.
 
 ### DEC-D07 — Kontinuitas dan akses
 
@@ -94,7 +102,7 @@ Backup minimal sekali per hari dengan target RPO 24 jam dan target RTO 4 jam, ba
 | DEC-O02 | Nama/alamat/nomor toko dan akun email nyata | Gunakan fixture terpisah bertanda contoh | Sebelum setup produksi |
 | DEC-O03 | Katalog, stok/modal awal, faktor roll/pak, langkah potong nyata | Implementasikan validasi; blokir penjualan produk belum lengkap | Sebelum produk tersebut dipakai |
 | DEC-O04 | Lama/cakupan garansi | Catat keluhan ulang; owner memutuskan biaya per kasus | Sebelum mencetak janji garansi |
-| DEC-O05 | Kebijakan pembatalan/biaya diagnosis/refund DP | Tidak ada DP otomatis hangus; owner memasukkan hasil penyelesaian yang disetujui | Saat kasus terjadi |
+| DEC-O05 | Kebijakan pembatalan/biaya diagnosis | Tanpa uang muka (DEC-U04); kelebihan bayar akibat nota kredit wajib dikembalikan; owner memasukkan hasil penyelesaian yang disetujui | Saat kasus terjadi |
 | DEC-O06 | Tempo supplier dan harga grosir | Di luar R1; jangan tampilkan opsi yang belum didukung | Sebelum memperluas scope |
 | DEC-O07 | Tujuan backup, secret, media kedua, kanal pemberitahuan | Buat runbook/script dengan konfigurasi; jangan mengklaim backup aktif | Sebelum gate pemulihan |
 | DEC-O08 | Tanggal pembukaan pasti dan penanggung jawab input awal | Ikuti urutan dependensi; jangan menjanjikan tanggal tanpa hasil uji | Sebelum jadwal rilis final |

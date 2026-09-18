@@ -20,7 +20,7 @@ Baseline 1.1. Ini kontrak desain schema, **bukan migrasi SQL yang sudah diterapk
 | shop_settings | singleton id, nama/alamat/kontak, currency IDR, timezone Asia/Jakarta, receipt_width, configured_at, version; bukan tabel multi-toko |
 | categories | id, name, active; kategori berproduk diarsip, tidak dihapus |
 | products | id, sku, name, specification, aliases, category_id, base_unit, quantity_step, track_segments, min_stock, shelf, active, version; tidak menyimpan saldo stok authoritative di sini |
-| product_units | id, product_id, label, factor_base, sale_step, sell_price, active, version; base immutable setelah digunakan, versi opsi lama dipertahankan |
+| product_units | id, product_id, label, factor_base, sale_step, sell_price, whole_roll (roll utuh bersegel; hanya barang roll dengan factor_base > 1), active, version; base immutable setelah digunakan, versi opsi lama dipertahankan |
 | product_barcodes | id, product_id, product_unit_id nullable, code text unique; unit harus milik produk yang sama |
 | product_price_history | id, unit_id, before_price, after_price, reason, actor_id, created_at; perubahan harga bukan edit riwayat |
 | customers | id, name, phone_normalized nullable, alternate_contact nullable, address nullable, active; minimal kontak untuk servis, nomor tidak unique |
@@ -57,7 +57,7 @@ Indeks: inventory_lots(product_id,posted_at,id); positions(lot_id,location,condi
 
 | Entitas | Kolom penting dan aturan |
 |---|---|
-| service_tickets | id, number unique, customer_id, mechanic_id FK profile owner, parent_ticket_id nullable, service_location STORE/ONSITE, custody_location CUSTOMER/SHOP/FATHER, equipment_type/brand/model/serial, complaint, initial_condition, accessories, address nullable, scheduled_at nullable, work_status, terminal_reason nullable, test_result nullable, closed_at nullable, version, created_at |
+| service_tickets | id, number unique, customer_id, mechanic_id FK profile owner, parent_ticket_id nullable, service_location STORE/ONSITE, custody_location CUSTOMER/SHOP/FATHER, equipment_type/brand/model/serial, complaint, initial_condition, accessories, address nullable, scheduled_at nullable, work_status, terminal_reason nullable, test_result nullable, completed_at nullable (layanan selesai), closed_at nullable (selesai dan lunas; CHECK closed_at ⇒ completed_at), receivable_note nullable, version, created_at |
 | service_status_events | id, ticket_id, from_status, to_status, kind TRANSITION/CORRECTION, reason, actor_id, occurred_at; append-only |
 | service_custody_events | id, ticket_id, from_location, to_location, condition_note, accessories_note, receiver_name nullable, actor_id, occurred_at; handover flag eksplisit |
 | service_estimates | id, ticket_id, revision unique per tiket, description, min_amount nullable, max_amount, status DRAFT/PROPOSED/APPROVED/SUPERSEDED/REJECTED, approved_limit nullable, approved_method/time/actor, customer_consent_note, version |
@@ -88,8 +88,8 @@ Self-reference parent_ticket_id tidak boleh diri sendiri atau membentuk siklus. 
 Aturan relasi:
 
 - Invoice SALE tidak memiliki service_ticket_id; invoice SERVICE wajib tiket dan satu final invoice per tiket.
-- Payment SALE menunjuk invoice SALE; payment SERVICE/DP menunjuk tiket, sebelum/sesudah invoice final tetap satu target yang sama. Pembayaran purchase menunjuk stock_document RECEIPT. CHECK target eksklusif menurut purpose.
-- Refund SALE menunjuk invoice dan credit note melalui alokasi; refund DP/service menunjuk tiket. SUM refund allocations = outgoing amount; tidak melebihi net penerimaan asal. Payment reversal memiliki original-payment link melalui refund allocation untuk pembalikan keluar atau correction reference pada event pengganti; tidak memakai credit note jika invoice tidak berubah.
+- Payment SALE menunjuk invoice SALE; payment SERVICE menunjuk tiket (uang muka lama sebelum invoice dan cicilan sesudahnya satu target yang sama). Pembayaran purchase menunjuk stock_document RECEIPT. CHECK target eksklusif menurut purpose.
+- Refund SALE menunjuk invoice dan credit note melalui alokasi; refund servis menunjuk tiket. SUM refund allocations = outgoing amount; tidak melebihi net penerimaan asal. Payment reversal memiliki original-payment link melalui refund allocation untuk pembalikan keluar atau correction reference pada event pengganti; tidak memakai credit note jika invoice tidak berubah.
 - PAYMENT_REVERSAL OUT dan PAYMENT_REPLACEMENT IN sama-sama memiliki original_payment_id FK dan target yang sama; unique pasangan per original pada R1. Replacement tidak boleh bernilai berbeda dari reversal. Penerimaan/refund pelanggan mengabaikan purpose koreksi, sementara net_received dan rekonsiliasi metode memasukkannya sesuai BR-07. R1 correct_payment hanya untuk receipt pelanggan IN yang belum punya refund/koreksi.
 - Invoice total dan item allocation sesuai BR-04; gunakan constraint/function dan invariant checks untuk aggregate. `line_no` stabil/unique.
 - qty/biaya part tidak dihitung lagi dari invoice_items untuk COGS; gunakan service_cost_recognitions. SALE COGS berasal cost_allocations terkait invoice_item.

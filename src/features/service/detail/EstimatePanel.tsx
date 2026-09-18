@@ -13,7 +13,7 @@ import type { ApprovalMethod, CommandResult, Estimate, TicketDetail } from '../t
 export function EstimatePanel({ ticket }: { ticket: TicketDetail }) {
   const profile = useProfile()
   const owner = permissions.manageService(profile)
-  const editable = owner && !ticket.invoice && !ticket.closed_at
+  const editable = owner && !ticket.invoice && !ticket.completed_at
   const latest = ticket.estimates.at(-1) ?? null
   const { approved_limit: limit, approved_revision: revision } = ticket.approval
   const partCharges = partChargeEstimate(ticket.part_events)

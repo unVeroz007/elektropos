@@ -27,7 +27,7 @@ export type ReceiptData = {
 }
 
 /**
- * Kuitansi DP/pelunasan (BR-10): tiket, nilai diterima, total final bila ada,
+ * Kuitansi pembayaran/cicilan/pelunasan (BR-10): tiket, nilai diterima, total tagihan bila ada,
  * sisa/kelebihan, metode, petugas, waktu. Dicetak lewat dialog agar hanya
  * kuitansi yang ikut tercetak.
  */
@@ -39,6 +39,8 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: ReceiptData; onCl
     if (dialog && !dialog.open) dialog.showModal()
   }, [])
   const final = receipt.payment.invoice_id !== null
+  const title = receipt.purpose === 'DEPOSIT' ? 'Kuitansi uang muka'
+    : isPositive(receipt.payment.outstanding) ? 'Kuitansi pembayaran (cicilan)' : 'Kuitansi pelunasan'
 
   return (
     <dialog ref={ref} className="ui-dialog srv-receipt-dialog" aria-label="Kuitansi pembayaran servis"
@@ -49,7 +51,7 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: ReceiptData; onCl
           {shop.data?.address && <span>{shop.data.address}</span>}
           {shop.data?.phone && <span>Telp. {shop.data.phone}</span>}
         </header>
-        <h2>{receipt.purpose === 'DEPOSIT' ? 'Kuitansi uang muka' : 'Kuitansi pelunasan'}</h2>
+        <h2>{title}</h2>
         <SummaryRow label="Tiket" value={receipt.ticketNumber} />
         {receipt.customerName && <SummaryRow label="Pelanggan" value={receipt.customerName} />}
         <SummaryRow label="Alat" value={receipt.equipment} />
@@ -64,7 +66,7 @@ export function ReceiptDialog({ receipt, onClose }: { receipt: ReceiptData; onCl
         )}
         {final ? (
           <>
-            <SummaryRow label="Total tagihan final" value={formatRupiah(receipt.payment.invoice_net)} />
+            <SummaryRow label="Total tagihan" value={formatRupiah(receipt.payment.invoice_net)} />
             <SummaryRow label="Total sudah dibayar" value={formatRupiah(receipt.payment.net_received)} />
             <SummaryRow strong label="Sisa" value={formatRupiah(receipt.payment.outstanding)} />
             {isPositive(receipt.payment.refund_due) && (

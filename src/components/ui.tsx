@@ -191,16 +191,23 @@ export function ChoiceGroup<T extends string>({ label, value, onChange, options 
   )
 }
 
-export function Checkbox({ label, checked, onChange, disabled }: {
+export function Checkbox({ label, checked, onChange, disabled, hint }: {
   label: string
   checked: boolean
   onChange: (checked: boolean) => void
   disabled?: boolean
+  hint?: string
 }) {
+  const id = useId()
+  const hintId = hint ? `${id}-hint` : undefined
   return (
     <label className="ui-checkbox">
-      <input type="checkbox" checked={checked} disabled={disabled} onChange={e => onChange(e.target.checked)} />
-      <span>{label}</span>
+      <input type="checkbox" checked={checked} disabled={disabled} aria-describedby={hintId}
+        onChange={e => onChange(e.target.checked)} />
+      <span>
+        {label}
+        {hint && <small id={hintId} className="ui-checkbox-hint">{hint}</small>}
+      </span>
     </label>
   )
 }

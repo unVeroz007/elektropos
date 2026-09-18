@@ -38,7 +38,7 @@ Koreksi/opname: pilih produk/posisi, ambil versi, hitung fisik, lihat selisih, i
 
 ## WF-03 — Penerimaan servis toko
 
-Pilih/catat pelanggan dan kontak → alat/keluhan → kondisi/kelengkapan → custody SHOP → label dan nota titipan → DP opsional. Tiket boleh tersimpan sebelum foto selesai diunggah. Tiket tetap ada jika unggah gagal, dengan opsi unggah ulang.
+Pilih/catat pelanggan dan kontak → alat/keluhan → kondisi/kelengkapan → custody SHOP → label dan nota titipan. Tanpa uang muka (DEC-U04). Tiket boleh tersimpan sebelum foto selesai diunggah. Tiket tetap ada jika unggah gagal, dengan opsi unggah ulang.
 
 Nota titipan memuat nomor, pelanggan, alat, kondisi/kelengkapan ringkas, tanggal masuk, kontak toko dan estimasi jika ada. Tidak mencetak tarif/garansi yang belum ditentukan.
 
@@ -71,11 +71,11 @@ Biaya nol tetap membutuhkan penetapan/persetujuan eksplisit sebelum WORKING. Per
 
 1. Owner memilih hasil terminal dan memastikan pemakaian part/reversal sudah benar.
 2. Owner mengisi jasa/biaya lain, memeriksa total terhadap persetujuan, lalu finalisasi invoice.
-3. DP dialokasikan ke tiket; layar menampilkan sisa atau kelebihan. Pelunasan sisa diterima oleh owner/staff sesuai lokasi kas.
+3. Pembayaran diterima setelah tagihan dibuat, boleh dicicil; layar menampilkan sisa atau kelebihan. Owner/staff menerima sesuai lokasi kas.
 4. Kelebihan dikembalikan melalui refund owner yang mengacu receipt asli. Batal/tidak berhasil dapat punya biaya diagnosis yang disepakati atau nol.
-5. Jika alat masih dititipkan, serahkan setelah syarat BR-11; simpan nama penerima dan waktu. Jika alat di rumah pelanggan, langsung Close layanan setelah semua syarat terpenuhi.
+5. Jika alat masih dititipkan, serahkan setelah syarat BR-11; simpan nama penerima dan waktu. Jika alat di rumah pelanggan, langsung Close layanan setelah semua syarat terpenuhi. Bila masih ada sisa tagihan, hanya owner yang dapat melanjutkan dengan mencentang "serahkan dengan sisa tagihan" dan menulis kapan dibayar; tiket tampil sebagai piutang servis dan tertutup saat lunas.
 
-Koreksi total invoice final yang menurunkan tagihan menggunakan credit note jasa/part, tidak melakukan refund DP kedua. Part yang terpasang tidak otomatis kembali ke stok akibat pengurangan harga jasa; pengembalian part perlu kejadian fisik tersendiri.
+Koreksi total invoice final yang menurunkan tagihan menggunakan credit note jasa/part, tidak melakukan refund kedua. Part yang terpasang tidak otomatis kembali ke stok akibat pengurangan harga jasa; pengembalian part perlu kejadian fisik tersendiri.
 
 ## WF-07 — Keluhan kembali
 
@@ -111,4 +111,4 @@ Pernyataan di atas berlaku saat auth expired/refresh dengan pengguna yang sama. 
 
 ## UX-03 — Pengujian dengan ayah/karyawan
 
-Gunakan contoh produk nyata untuk membedakan merek/ampere/watt, transaksi meteran, pencarian alat titipan, DP dan kas tutup. Setelah latihan singkat, pengguna menjalankan tugas tanpa panduan langkah demi langkah; catat waktu, salah tekan dan kebutuhan bantuan. UI harus diperbaiki berdasarkan observasi sebelum dinyatakan mudah digunakan.
+Gunakan contoh produk nyata untuk membedakan merek/ampere/watt, transaksi meteran, pencarian alat titipan, cicilan servis dan kas tutup. Setelah latihan singkat, pengguna menjalankan tugas tanpa panduan langkah demi langkah; catat waktu, salah tekan dan kebutuhan bantuan. UI harus diperbaiki berdasarkan observasi sebelum dinyatakan mudah digunakan.

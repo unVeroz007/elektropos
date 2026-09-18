@@ -125,8 +125,8 @@ Input `{"start_date":"2026-09-01","end_date":"2026-09-30"}`. Keluaran (semua uan
 Definisi (BR-13):
 - Neto barang/servis = invoice diposting di periode − credit note diposting di periode (per `posted_at` masing-masing).
   Retur bulan berikutnya mengurangi bulan retur (boleh negatif); bulan jual tidak berubah.
-- Penerimaan pelanggan = payment IN `SALE_RECEIPT`/`SERVICE_RECEIPT` per `occurred_at`; DP = penerimaan servis
-  sebelum tagihan final tiket tersebut diposting. Refund = OUT `CUSTOMER_REFUND`. Koreksi metode dipisah (net nol).
+- Penerimaan pelanggan = payment IN `SALE_RECEIPT`/`SERVICE_RECEIPT` per `occurred_at`; `deposit_total` = uang muka lama
+  (penerimaan servis sebelum tagihan tiket diposting; sejak 18-09-2026 tidak ada uang muka baru). Refund = OUT `CUSTOMER_REFUND`. Koreksi metode dipisah (net nol).
 - COGS barang = Σ `cost_allocations` untuk invoice SALE diposting di periode − Σ `credit_note_items.cost_reversal_amount`
   untuk credit note SALE diposting di periode (`cost_allocations.reversed_cost` tidak dipakai). COGS servis =
   Σ `service_cost_recognitions` invoice SERVICE di periode − reversal credit note SERVICE di periode.
@@ -142,7 +142,7 @@ Input `{}`. "Hari ini" = `private.local_today()` WIB. Keluaran: `today` (struktu
 atas), kunci ringkas lama (`sales_total`, `sales_count`, `service_total`, `refund_total`, `receipts_cash`,
 `receipts_transfer` = TRANSFER+QRIS, `cash_session_open`, `low_stock`), `cash_sessions[]` per cashbox (`open`,
 `opened_at`, `business_date`, `opened_by`; `expected_amount` hanya OWNER/MAINTAINER), `service`
-(`active_by_status`, `active_total`, `not_picked_up_count` + `not_picked_up[]` maks 10 — status terminal
+(`active_by_status`, `active_total` — hanya layanan yang belum selesai, `receivable_count`, `receivable_total`, `receivables[]` maks 10 `{ticket_id, number, customer_name, completed_at, outstanding, note}` = piutang servis, `not_picked_up_count` + `not_picked_up[]` maks 10 — status terminal
 READY/UNREPAIRABLE/CANCELLED/ONSITE_DONE dengan custody SHOP/FATHER walau lunas, `scheduled_today[]` maks 20),
 `low_stock_items[]` maks 10, `backup` (`last_status`, `last_success_at`, `age_hours`, `stale` bila >24 jam), `refreshed_at`.
 

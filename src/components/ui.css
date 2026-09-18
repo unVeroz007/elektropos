@@ -106,7 +106,8 @@
 .ui-choices small { font-weight: 400; color: var(--color-text-muted); }
 
 .ui-checkbox { display: flex; align-items: center; gap: var(--space-3); min-height: var(--touch-target); font-size: var(--font-size-base); cursor: pointer; }
-.ui-checkbox input { width: 24px; height: 24px; accent-color: var(--color-primary); }
+.ui-checkbox input { width: 24px; height: 24px; flex: none; accent-color: var(--color-primary); }
+.ui-checkbox-hint { display: block; color: var(--color-text-muted); font-size: var(--font-size-sm); }
 
 .ui-button {
   display: inline-flex;

@@ -21,7 +21,7 @@ function locationLabel(location: string | null): string {
 export function PartsPanel({ ticket }: { ticket: TicketDetail }) {
   const profile = useProfile()
   const owner = permissions.manageService(profile)
-  const open = owner && !ticket.invoice && !ticket.closed_at
+  const open = owner && !ticket.invoice && !ticket.completed_at
   const canUse = open && ticket.work_status === 'WORKING' && Boolean(ticket.approval.active)
   const reversed = new Map<string, PartEvent[]>()
   for (const e of ticket.part_events) {

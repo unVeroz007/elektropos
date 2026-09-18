@@ -31,6 +31,7 @@ function isCartLine(value: unknown): value is CartLine {
     && typeof value.unitVersion === 'number'
     && typeof value.sellPrice === 'string'
     && typeof value.factorBase === 'string'
+    && typeof value.wholeRoll === 'boolean'
     && typeof value.saleStep === 'string'
     && typeof value.quantityStep === 'string'
 }

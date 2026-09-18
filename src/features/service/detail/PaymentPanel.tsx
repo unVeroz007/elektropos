@@ -8,7 +8,7 @@ import { permissions, useProfile, type Profile } from '../../../lib/session'
 import { useServiceCommand } from '../api'
 import { Button, CommandError, PaymentBadge } from '../common'
 import { CASHBOX, METHOD, PAYMENT_PURPOSE } from '../labels'
-import { isPositive, paymentFormError, refundLimit, settlementAmount } from '../logic'
+import { isPositive, payableAmount, paymentFormError, refundLimit } from '../logic'
 import type { Cashbox, CommandResult, PayMethod, PaymentRecord, PaymentResult, TicketDetail } from '../types'
 import { ReceiptDialog, type ReceiptData } from './Receipt'
 
@@ -28,14 +28,17 @@ function equipmentOf(ticket: TicketDetail): string {
   return [ticket.equipment_type, ticket.equipment_brand, ticket.equipment_model].filter(Boolean).join(' ')
 }
 
-/** Status bayar, uang muka, pelunasan tepat sisa, pengembalian, dan kuitansi (BR-10). */
+/**
+ * Status bayar, pembayaran (boleh dicicil setelah tagihan dibuat), pengembalian, dan kuitansi (BR-10).
+ * Keputusan pemilik 18-09-2026: tanpa uang muka — biaya baru diketahui setelah pemeriksaan & part.
+ */
 export function PaymentPanel({ ticket }: { ticket: TicketDetail }) {
   const profile = useProfile()
   const [receipt, setReceipt] = useState<ReceiptData | null>(null)
   const { payment } = ticket
   const final = payment.invoice_id !== null
-  const settlement = settlementAmount(payment)
-  const canReceive = permissions.receiveService(profile) && !ticket.closed_at && (!final || settlement !== null)
+  const payable = payableAmount(payment)
+  const canReceive = permissions.receiveService(profile) && !ticket.closed_at && payable !== null
   const refundMax = refundLimit(ticket)
   const canRefund = permissions.manageService(profile) && !ticket.closed_at && refundMax !== null
 
@@ -51,8 +54,8 @@ export function PaymentPanel({ ticket }: { ticket: TicketDetail }) {
 
   return (
     <Card title="Pembayaran" actions={<PaymentBadge status={payment.status} />}>
-      <SummaryRow label="Tagihan final" value={final ? formatRupiah(payment.invoice_net) : 'Belum ditentukan'} />
-      <SummaryRow label={final ? 'Sudah dibayar' : 'Uang muka diterima'} value={formatRupiah(payment.net_received)} />
+      <SummaryRow label="Tagihan" value={final ? formatRupiah(payment.invoice_net) : 'Belum dibuat'} />
+      <SummaryRow label="Sudah dibayar" value={formatRupiah(payment.net_received)} />
       {final && <SummaryRow strong label="Sisa bayar" value={formatRupiah(payment.outstanding)}
         tone={isPositive(payment.outstanding) ? 'danger' : 'success'} />}
       {isPositive(payment.refund_due) && (
@@ -77,11 +80,20 @@ export function PaymentPanel({ ticket }: { ticket: TicketDetail }) {
         </ul>
       )}
 
+      {!final && !ticket.closed_at && (
+        <Notice tone="info">Tidak ada uang muka. Pembayaran diterima setelah tagihan dibuat dari hasil pemeriksaan dan part.</Notice>
+      )}
+      {ticket.receivable && isPositive(payment.outstanding) && (
+        <Notice tone="warning">
+          Alat sudah diterima pelanggan dengan sisa tagihan {formatRupiah(payment.outstanding)} (piutang servis).
+          {ticket.receivable_note && <> Catatan: {ticket.receivable_note}</>}
+        </Notice>
+      )}
       {final && !isPositive(payment.outstanding) && !isPositive(payment.refund_due) && (
         <Notice tone="success">Tagihan sudah lunas.</Notice>
       )}
-      {canReceive && (
-        <PaymentForm key={`${payment.invoice_id ?? 'dp'}-${payment.outstanding ?? ''}`} ticket={ticket} settlement={settlement}
+      {canReceive && payable && (
+        <PaymentForm key={`${payment.invoice_id}-${payable}`} ticket={ticket} outstanding={payable}
           onPaid={result => setReceipt({
             ticketNumber: result.ticket_number, customerName: ticket.customer?.name ?? null, equipment: equipmentOf(ticket),
             purpose: result.purpose, method: result.method, cashbox: result.cashbox, amount: result.amount,
@@ -95,13 +107,13 @@ export function PaymentPanel({ ticket }: { ticket: TicketDetail }) {
   )
 }
 
-function PaymentForm({ ticket, settlement, onPaid }: {
+function PaymentForm({ ticket, outstanding, onPaid }: {
   ticket: TicketDetail
-  settlement: string | null
+  outstanding: string
   onPaid: (result: PaymentResult) => void
 }) {
   const profile = useProfile()
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = useState(() => new Decimal(outstanding).toFixed(0))
   const [method, setMethod] = useState<PayMethod>('CASH')
   const [cashbox, setCashbox] = useState<Cashbox>('SHOP_DRAWER')
   const [tendered, setTendered] = useState('')
@@ -112,16 +124,15 @@ function PaymentForm({ ticket, settlement, onPaid }: {
 
   // Hasil belum diketahui: isian dikunci agar pengiriman ulang memakai data & operation_id yang sama.
   const locked = command.error?.kind === 'network' || command.busy
-  const amountValue = settlement ?? rupiahOrNull(amount)
-  const error = paymentFormError({ amount: amountValue, method, tendered, confirmed })
+  const amountValue = rupiahOrNull(amount)
+  const error = paymentFormError({ amount: amountValue, max: outstanding, method, tendered, confirmed })
+  const partial = amountValue !== null && new Decimal(amountValue).lessThan(outstanding)
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     setTouched(true)
     if (error || !amountValue) return
-    const payload: Record<string, unknown> = {
-      ticket_id: ticket.id, purpose: settlement ? 'SETTLEMENT' : 'DEPOSIT', amount: amountValue, method,
-    }
+    const payload: Record<string, unknown> = { ticket_id: ticket.id, amount: amountValue, method }
     if (method === 'CASH') {
       payload.cashbox = cashbox
       payload.tendered = rupiahOrNull(tendered)
@@ -138,11 +149,15 @@ function PaymentForm({ ticket, settlement, onPaid }: {
 
   return (
     <form className="srv-subform" onSubmit={submit} noValidate>
-      <p className="srv-subform-title">{settlement ? 'Pelunasan' : 'Terima uang muka (boleh lebih dari sekali)'}</p>
+      <p className="srv-subform-title">Terima pembayaran (boleh dicicil)</p>
       <fieldset className="srv-fieldset-plain" disabled={locked}>
-        {settlement
-          ? <SummaryRow strong label="Harus dibayar tepat" value={formatRupiah(settlement)} />
-          : <RupiahInput label="Jumlah uang muka" value={amount} onChange={setAmount} required />}
+        <RupiahInput label="Jumlah dibayar sekarang" value={amount} onChange={setAmount} required
+          hint={`Sisa tagihan ${formatRupiah(outstanding)}. Isi lebih kecil bila pelanggan mencicil.`} />
+        {partial && (
+          <Button variant="secondary" onClick={() => setAmount(new Decimal(outstanding).toFixed(0))}>
+            Lunasi semua {formatRupiah(outstanding)}
+          </Button>
+        )}
         <ChoiceGroup label="Cara bayar" value={method} onChange={value => { setMethod(value); setConfirmed(false) }} options={METHODS} />
         {method === 'CASH' ? (
           <>
@@ -169,8 +184,9 @@ function PaymentForm({ ticket, settlement, onPaid }: {
         <Button type="submit" large disabled={command.busy}>
           {command.busy ? 'Menyimpan…'
             : command.error?.kind === 'network' ? 'Kirim ulang (aman, tidak tercatat dua kali)'
-              : settlement ? `Lunasi sisa ${formatRupiah(settlement)}`
-                : `Terima uang muka${amountValue ? ` ${formatRupiah(amountValue)}` : ''}`}
+              : !amountValue ? 'Terima pembayaran'
+                : partial ? `Terima cicilan ${formatRupiah(amountValue)}`
+                  : `Lunasi ${formatRupiah(amountValue)}`}
         </Button>
         {command.error?.kind === 'network' && (
           <Button variant="secondary" onClick={command.reset}>Ubah isian (cek riwayat pembayaran dulu)</Button>

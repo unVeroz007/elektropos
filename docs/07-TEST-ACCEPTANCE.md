@@ -42,7 +42,7 @@ Stok1m dijual0,1m sepuluh kali: sisa tepat0, modal lot tersisa0. Pcs1,5 ditolak.
 
 ### AT-06 — Roll utuh dan panjang kontinu
 
-Sisa6m dan4m tidak bisa memenuhi satu potongan10m; UI meminta pilihan fisik yang benar. Total100m dari banyak potongan tidak bisa dijual sebagai roll100m segel utuh. Retur potongan membuat posisi baru. Bukti: DB + UI.
+Sisa6m dan4m tidak bisa memenuhi satu potongan10m; UI meminta pilihan fisik yang benar. Total100m dari banyak potongan tidak bisa dijual sebagai roll100m segel utuh. Satuan isi>1 tanpa tanda roll utuh (ikat10m) dipotong dari satu potongan: 2 ikat dari potongan60m menyisakan40m. Retur potongan membuat posisi baru. Bukti: DB + UI.
 
 ### AT-07 — Diskon dan rounding
 
@@ -98,19 +98,19 @@ NEW->WORKING langsung ditolak. AWAITING_APPROVAL->WORKING tanpa persetujuan dito
 
 USE1 part mengurangi stock1 dan menyimpan cost. Finalisasi/pelunasan servis tidak mengurangi lagi. REVERSE sebelum final memulihkan qty/cost tepat sekali, tidak melebihi USE. Part tidak ditagih tetap diakui sebagai biaya tiket ketika final. Bukti: DB.
 
-### AT-20 — DP dan pelunasan
+### AT-20 — Pembayaran setelah tagihan dan cicilan
 
-TerimaDP50.000 saat total belum ditentukan: tampil UNPRICED, bukan Lunas. Final tagihan150.000 ->sisa100.000; pelunasan100.000 ->PAID; penerimaan total150.000, revenue invoice150.000 sekali. Pembayaran final kurang dari seluruh sisa ditolak pada R1. Bukti: DB + UI.
+Bayar50.000 sebelum tagihan dibuat ditolak (tanpa uang muka), laci tidak berubah. Tagihan150.000 ->UNPAID; cicilan50.000 ->PARTIAL sisa100.000; bayar100.001 ditolak; cicilan40.000 lalu60.000 ->PAID; penerimaan total150.000, revenue invoice150.000 sekali. Bukti: DB + UI.
 
-### AT-21 — DP berlebih/batal
+### AT-21 — Kelebihan bayar/batal
 
-DP100.000, invoice penyelesaian80.000 ->refund_due20.000. Refund20.000 menghapus kewajiban, revenue tetap80.000. Pembatalan dengan invoice0 ->refund100.000; tidak otomatis hangus. Refund ulang/lebih receipt ditolak. Bukti: DB + UI.
+Lunas100.000 lalu nota kredit20.000 ->refund_due20.000. Refund20.000 menghapus kewajiban, revenue kotor tetap100.000 dengan nota kredit20.000. Pembatalan tanpa pembayaran ->invoice0, tidak ada uang yang harus dibayar; uang muka lama pada tiket batal ->refund penuh, tidak otomatis hangus. Refund ulang/lebih receipt ditolak. Bukti: DB + UI.
 
 Pembatalan awal tanpa estimasi disetujui hanya dapat invoice0 melalui pembebasan eksplisit owner; null biaya biasa tidak cukup. Refund cash dengan dana cashbox kurang ditolak atomik; setelah penambahan dana sah, refund dapat dicoba kembali tanpa duplikasi.
 
 ### AT-22 — Pengambilan dan penutupan
 
-READY dan PAID tetapi custodySHOP tetap Belum diambil. Handover butuh nama penerima dan seluruh syarat; perubahan custody/closed atomik. UNREPAIRABLE dengan barang masih dititipkan tetap muncul. Onsite custodyCUSTOMER ditutup tanpa status Diambil palsu. Bukti: DB + E2E.
+READY dan PAID tetapi custodySHOP tetap Belum diambil. Handover butuh nama penerima dan seluruh syarat; perubahan custody/completed/closed atomik. Sisa tagihan: staff ditolak; owner dengan catatan ->layanan selesai, tiket belum tertutup, tampil sebagai piutang servis; cicilan berikutnya yang melunasi menutup tiket otomatis. UNREPAIRABLE dengan barang masih dititipkan tetap muncul. Onsite custodyCUSTOMER ditutup tanpa status Diambil palsu. Bukti: DB + E2E.
 
 ### AT-23 — Keluhan kembali
 
@@ -126,7 +126,7 @@ Tutup sesi bersamaan dengan payment: payment tercakup jika commit sebelum snapsh
 
 ### AT-26 — Laporan, tanggal dan peran
 
-Invoice akhir hari Jakarta dan refund awal hari berikut masuk periode masing-masing. DP tidak menjadi omzet sebelum invoice final. Total servis tidak dijumlahkan lagi sebagai SALE. Service COGS hanya recognition, bukan event+invoice dua kali. Laporan staff tidak mengandung modal. Bukti: fixture DB dengan nilai harapan independen.
+Invoice akhir hari Jakarta dan refund awal hari berikut masuk periode masing-masing. Pembayaran servis tidak menjadi omzet; nilai jasa diakui dari invoice SERVICE. Total servis tidak dijumlahkan lagi sebagai SALE. Service COGS hanya recognition, bukan event+invoice dua kali. Laporan staff tidak mengandung modal. Bukti: fixture DB dengan nilai harapan independen.
 
 ### AT-27 — Foto dan ekspor
 

@@ -7,6 +7,8 @@ export type ProductUnit = {
   sale_step: string
   sell_price: string
   is_default: boolean
+  /** Satuan roll utuh bersegel (mis. "roll 100 m"); satuan isi > 1 lain dijual sebagai potongan. */
+  whole_roll: boolean
   version: number
   active?: boolean
 }

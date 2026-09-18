@@ -102,3 +102,6 @@
   .srv-receipt-dialog::backdrop { background: none; }
   .srv-no-print { display: none !important; }
 }
+
+/* Serah terima dengan sisa tagihan (piutang servis). */
+.srv-unpaid { display: grid; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--color-warning); border-radius: var(--radius); background: var(--color-warning-bg); }

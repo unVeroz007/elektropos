@@ -187,7 +187,7 @@ export function buildIntakePayload(mode: IntakeMode, header: IntakeHeader, lines
   return payload
 }
 
-type ProductLike = {
+export type ProductLike = {
   id: string; name: string; sku: string; base_unit: string; track_segments: boolean
   units: { id: string; label: string; factor_base: string; is_default: boolean; active?: boolean }[]
 }

@@ -52,6 +52,15 @@ export type DashboardTicket = {
   scheduled_at?: string
 }
 
+export type DashboardReceivable = {
+  ticket_id: string
+  number: string
+  customer_name: string | null
+  completed_at: string
+  outstanding: string
+  note: string | null
+}
+
 export type Dashboard = {
   refreshed_at: string
   server_date: string
@@ -63,6 +72,10 @@ export type Dashboard = {
     not_picked_up_count: number
     not_picked_up: DashboardTicket[]
     scheduled_today: DashboardTicket[]
+    /** Piutang servis: alat sudah diterima pelanggan, tagihan belum lunas. */
+    receivable_count: number
+    receivable_total: string
+    receivables: DashboardReceivable[]
   }
   low_stock: number
   low_stock_items: { product_id: string; sku: string; name: string; base_unit: string; stock_shop: string; min_stock: string }[]

@@ -65,8 +65,9 @@ Y=diizinkan, N=ditolak. Pemeriksaan server wajib; UI menyesuaikan pengalaman saj
 | Lihat tiket dan foto pelanggan | Y | Y | Y |
 | Update progres, estimasi, persetujuan, penggunaan part | Y | N | N |
 | Finalisasi tagihan servis | Y | N | N |
-| Terima DP/pelunasan sesuai aturan | Y | Y | N |
+| Terima pembayaran/cicilan servis setelah tagihan dibuat | Y | Y | N |
 | Serahkan alat jika seluruh syarat terpenuhi | Y | Y | N |
+| Serahkan alat/tutup kunjungan dengan sisa tagihan (piutang servis) | Y | N | N |
 | Buat tiket keluhan kembali | Y | Y | N |
 | Cetak ulang nota yang boleh dibaca | Y | Y | Y |
 | Buka/hitung/tutup kas drawer | Y | Y | N |

@@ -23,6 +23,7 @@ export type TicketFilters = {
   query?: string
   include_closed?: boolean
   not_picked_up?: boolean
+  receivable?: boolean
   service_location?: ServiceLocation
 }
 
@@ -32,6 +33,7 @@ export function listTickets(filters: TicketFilters, cursor: string | null): Prom
   if (filters.query?.trim()) input.query = filters.query.trim()
   if (filters.include_closed) input.include_closed = true
   if (filters.not_picked_up) input.not_picked_up = true
+  if (filters.receivable) input.receivable = true
   if (filters.service_location) input.service_location = filters.service_location
   if (cursor) input.cursor = cursor
   return readRpc<TicketPage>('list_service_tickets_v1', input)

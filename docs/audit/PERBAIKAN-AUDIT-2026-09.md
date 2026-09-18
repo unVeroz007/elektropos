@@ -12,8 +12,11 @@ Setiap ID temuan wajib ditutup oleh kode + uji yang membuktikan aturan bisnis, b
 | D3 | Pembelian barang boleh dibayar tunai | Barang masuk CASH mengurangi kas dengan sesi terkunci dan cek saldo |
 | D4 | Produksi awal memakai Supabase lokal di PC toko | Uji tidak boleh menyentuh database aplikasi; backup harus keluar PC; restore memulihkan aplikasi utuh |
 | D5 | Barang retur akan dikembalikan ke distributor | Dokumen retur distributor (lihat default di bawah) |
+| D6 | Retur distributor biasanya diganti barang | Penyelesaian "barang pengganti" menjadi pilihan pertama, terisi barang & jumlah yang dikembalikan |
+| D7 | Kabel tidak harus per roll; bisa per meter atau satuan lain | Tanda `whole_roll` per satuan menggantikan tebakan "isi > 1 = roll utuh"; satuan lain dipotong dari satu potongan |
+| D8 | Servis tanpa uang muka; uang jasa boleh tidak langsung lunas | Bayar setelah tagihan dibuat, boleh dicicil; pemilik boleh menyerahkan dengan sisa (piutang servis); tiket tertutup saat lunas |
 
-Default D5 (dapat diubah pemilik): barang keluar stok menjadi **klaim distributor** senilai modal. Penyelesaian klaim:
+Default D5 (dapat diubah pemilik; D6 menjadikan barang pengganti pilihan utama): barang keluar stok menjadi **klaim distributor** senilai modal. Penyelesaian klaim:
 `REFUND` (uang kembali; tunai masuk kas/transfer), `CREDIT` (potong tagihan berikutnya, tercatat sebagai saldo kredit distributor),
 `REPLACEMENT` (barang pengganti masuk sebagai lot baru dengan modal = nilai klaim), `REJECTED` (ditolak; nilai menjadi kerugian tercatat).
 Selisih uang kembali terhadap nilai klaim dicatat sebagai laba/rugi retur distributor, terpisah dari laba kotor penjualan.
@@ -102,6 +105,7 @@ Semua temuan di atas ditangani di branch `fix/audit-menyeluruh`. Bukti per kasus
 | T10 | Tertutup | uji ditulis ulang dari aturan bisnis; `verify:flows` memeriksa nilai |
 | S01–S13 | Tertutup | lihat keterlacakan; S10 tampilan HP dirancang responsif tetapi belum diuji di perangkat |
 | R01–R05 | Tertutup | EXECUTE fungsi private dicabut; dokumen & perintah diperbarui; fixture tidak masuk DB aplikasi |
+| D6–D8 | Diterapkan | migrasi `20260918006000`/`006100`; `service_flow.sql`, `service_money.sql`, `sales_roll.sql`, `sales_catalog.sql`, `report_dashboard.sql`; `returnModel.test.ts`, `productForm.test.ts`, `logic.test.ts`, `cart.test.ts`; `verify:flows` |
 
 Sisa yang belum terbukti (bukan kegagalan, belum ada perangkat/pengguna): cetak fisik 58/80 mm, scanner & kamera
 nyata, tampilan di HP nyata, putus jaringan nyata, performa fixture besar, UAT dengan ayah/karyawan, pemulihan ke

@@ -13,6 +13,8 @@ export type ProductFormState = {
   track_segments: boolean
   unit_label: string
   factor_base: string
+  /** Satuan jual = roll utuh bersegel (keputusan pemilik: tidak ditebak dari isi satuan). */
+  whole_roll: boolean
   sale_step: string
   sell_price: string
   barcode: string
@@ -30,7 +32,7 @@ export const KIND_PRESETS: Record<Exclude<ProductKind, 'OTHER'>, Partial<Product
 export const EMPTY_FORM: ProductFormState = {
   sku: '', name: '', specification: '', category_id: '', shelf: '',
   base_unit: 'pcs', quantity_step: '1', track_segments: false,
-  unit_label: 'pcs', factor_base: '1', sale_step: '1', sell_price: '', barcode: '', reason: '',
+  unit_label: 'pcs', factor_base: '1', whole_roll: false, sale_step: '1', sell_price: '', barcode: '', reason: '',
 }
 
 const plain = (value: string) => new Decimal(value).toFixed()
@@ -49,6 +51,7 @@ export function formFromProduct(product: ProductDetail): ProductFormState {
     track_segments: product.track_segments,
     unit_label: unit?.label ?? '',
     factor_base: unit ? plain(unit.factor_base) : '1',
+    whole_roll: unit?.whole_roll ?? false,
     sale_step: unit ? plain(unit.sale_step) : '1',
     sell_price: unit ? new Decimal(unit.sell_price).toFixed() : '',
   }
@@ -69,6 +72,21 @@ export function unitChanged(original: ProductFormState, current: ProductFormStat
     || !sameNumber(original.factor_base, current.factor_base, parseQuantity)
     || !sameNumber(original.sale_step, current.sale_step, parseQuantity)
     || !sameNumber(original.sell_price, current.sell_price, parseRupiah)
+    || wholeRollValue(original) !== wholeRollValue(current)
+}
+
+/** Pilihan "roll utuh" hanya bermakna untuk barang roll dengan isi satuan lebih dari 1. */
+export function canBeWholeRoll(state: ProductFormState): boolean {
+  if (!state.track_segments) return false
+  try {
+    return parseQuantity(state.factor_base).greaterThan(1)
+  } catch {
+    return false
+  }
+}
+
+function wholeRollValue(state: ProductFormState): boolean {
+  return state.whole_roll && canBeWholeRoll(state)
 }
 
 export function formErrors(state: ProductFormState): string[] {
@@ -111,6 +129,7 @@ export function buildProductPayload(state: ProductFormState, product?: ProductDe
     track_segments: state.track_segments,
     unit_label: state.unit_label.trim(),
     factor_base: parseQuantity(state.factor_base).toFixed(),
+    whole_roll: wholeRollValue(state),
     sale_step: parseQuantity(state.sale_step).toFixed(),
     sell_price: parseRupiah(state.sell_price).toFixed(0),
     shelf: state.shelf.trim() || null,

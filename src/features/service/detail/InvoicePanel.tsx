@@ -139,7 +139,7 @@ function FinalizeForm({ ticket }: { ticket: TicketDetail }) {
           ? <SummaryRow label="Batas disetujui pelanggan" value={formatRupiah(limit)} />
           : <SummaryRow label="Batas disetujui pelanggan" value="Belum ada" />}
         {isPositive(ticket.payment.net_received) && (
-          <SummaryRow label="Uang muka sudah diterima" value={formatRupiah(ticket.payment.net_received)} />
+          <SummaryRow label="Uang yang sudah diterima (data lama)" value={formatRupiah(ticket.payment.net_received)} />
         )}
 
         {limit === null && failed && total.isZero() && (

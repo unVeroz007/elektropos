@@ -103,12 +103,15 @@ export function isPositive(value: string | null | undefined): value is string {
   return value !== null && value !== undefined && value !== '' && new Decimal(value).greaterThan(0)
 }
 
-/** Sisa yang harus dilunasi tepat, atau null bila belum ada tagihan final / sudah lunas. */
-export function settlementAmount(payment: PaymentState): string | null {
+/**
+ * Sisa tagihan yang masih bisa dibayar, atau null bila tagihan belum dibuat / sudah lunas.
+ * Keputusan pemilik 18-09-2026: tanpa uang muka; pembayaran setelah tagihan dibuat dan boleh dicicil.
+ */
+export function payableAmount(payment: PaymentState): string | null {
   return isFinal(payment) && isPositive(payment.outstanding) ? payment.outstanding : null
 }
 
-/** Batas uang kembali: refund_due setelah final, atau semua uang masuk bila batal tanpa tagihan. */
+/** Batas uang kembali: refund_due setelah final, atau uang muka lama bila batal tanpa tagihan. */
 export function refundLimit(ticket: Pick<TicketDetail, 'work_status' | 'payment'>): string | null {
   const { payment } = ticket
   if (isFinal(payment)) return isPositive(payment.refund_due) ? payment.refund_due : null
@@ -116,39 +119,61 @@ export function refundLimit(ticket: Pick<TicketDetail, 'work_status' | 'payment'
   return null
 }
 
-/** Syarat umum penutupan (serah terima / tutup kunjungan). Kosong berarti boleh. */
-function closingBlockers(ticket: TicketDetail): string[] {
+/**
+ * Syarat umum menyelesaikan layanan (serah terima / tutup kunjungan). Kosong berarti boleh.
+ * Sisa tagihan bukan penghalang di sini: lihat `unpaidCompletionError` (keputusan pemilik).
+ */
+function completionBlockers(ticket: TicketDetail): string[] {
+  if (ticket.completed_at) return ['Layanan sudah selesai.']
   const reasons: string[] = []
-  if (ticket.closed_at) return ['Tiket sudah ditutup.']
   if (!isTerminal(ticket.work_status)) {
     reasons.push('Pekerjaan belum selesai. Tandai selesai, tidak bisa diperbaiki, atau dibatalkan lebih dulu.')
   }
-  if (!isFinal(ticket.payment)) reasons.push('Tagihan belum final.')
-  else {
-    if (isPositive(ticket.payment.outstanding)) {
-      reasons.push(`Masih ada sisa bayar ${formatRupiah(ticket.payment.outstanding)}.`)
-    }
-    if (isPositive(ticket.payment.refund_due)) {
-      reasons.push(`Ada uang yang harus dikembalikan ke pelanggan ${formatRupiah(ticket.payment.refund_due)}.`)
-    }
+  if (!isFinal(ticket.payment)) reasons.push('Tagihan belum dibuat.')
+  else if (isPositive(ticket.payment.refund_due)) {
+    reasons.push(`Ada uang yang harus dikembalikan ke pelanggan ${formatRupiah(ticket.payment.refund_due)}.`)
   }
   return reasons
 }
 
 export function handoverBlockers(ticket: TicketDetail): string[] {
-  const reasons = closingBlockers(ticket)
-  if (!ticket.closed_at && ticket.custody_location === 'CUSTOMER') {
+  const reasons = completionBlockers(ticket)
+  if (!ticket.completed_at && ticket.custody_location === 'CUSTOMER') {
     reasons.push('Alat tidak dititipkan di toko atau dibawa ayah.')
   }
   return reasons
 }
 
 export function closeOnsiteBlockers(ticket: TicketDetail): string[] {
-  const reasons = closingBlockers(ticket)
-  if (!ticket.closed_at && ticket.custody_location !== 'CUSTOMER') {
+  const reasons = completionBlockers(ticket)
+  if (!ticket.completed_at && ticket.custody_location !== 'CUSTOMER') {
     reasons.push('Alat masih di toko/dibawa ayah. Gunakan serah terima alat.')
   }
   return reasons
+}
+
+/** Sisa tagihan saat layanan diselesaikan, atau null bila sudah lunas / tagihan belum dibuat. */
+export function unpaidAtCompletion(ticket: Pick<TicketDetail, 'payment'>): string | null {
+  return payableAmount(ticket.payment)
+}
+
+/**
+ * Menyelesaikan layanan dengan sisa tagihan hanya boleh atas keputusan pemilik, dengan catatan
+ * kapan sisa dibayar. Sisa itu tercatat sebagai piutang servis sampai lunas.
+ */
+export function unpaidCompletionError(params: {
+  outstanding: string | null
+  isOwner: boolean
+  allowUnpaid: boolean
+  note: string
+}): string | null {
+  const { outstanding, isOwner, allowUnpaid, note } = params
+  if (!outstanding) return null
+  const rest = `Masih ada sisa tagihan ${formatRupiah(outstanding)}.`
+  if (!isOwner) return `${rest} Terima pembayaran dulu, atau minta pemilik menyetujui penyerahan dengan sisa tagihan.`
+  if (!allowUnpaid) return `${rest} Terima pembayaran dulu, atau centang "serahkan dengan sisa tagihan".`
+  if (note.trim().length < 3) return 'Tulis catatan kapan sisa tagihan akan dibayar.'
+  return null
 }
 
 /** `2026-09-20T10:00` (jam toko) → ISO 8601 zona Asia/Jakarta. */
@@ -175,8 +200,12 @@ export function telHref(phone: string): string {
 
 /** Petunjuk satu kalimat tentang langkah berikutnya untuk tiket ini. */
 export function nextStep(ticket: TicketDetail): string {
-  if (ticket.closed_at) return 'Servis sudah selesai dan ditutup.'
+  if (ticket.closed_at) return 'Servis sudah selesai dan lunas.'
   const { payment } = ticket
+  if (ticket.completed_at) {
+    if (isPositive(payment.refund_due)) return `Kembalikan kelebihan bayar ${formatRupiah(payment.refund_due)} ke pelanggan.`
+    return `Alat sudah diterima pelanggan. Tagih sisa ${formatRupiah(payment.outstanding)} (boleh dicicil).`
+  }
   switch (ticket.work_status) {
     case 'NEW': return 'Periksa alat (tekan "Mulai periksa"), lalu catat perkiraan biaya.'
     case 'INSPECTING': return 'Catat perkiraan biaya, lalu tanyakan persetujuan pelanggan.'
@@ -188,8 +217,10 @@ export function nextStep(ticket: TicketDetail): string {
     case 'WORKING': return 'Catat part yang dipakai. Setelah alat diuji, tekan "Selesai dikerjakan".'
     default: break
   }
-  if (!ticket.invoice) return 'Pekerjaan selesai. Buat tagihan final.'
-  if (isPositive(payment.outstanding)) return `Terima pelunasan ${formatRupiah(payment.outstanding)}.`
+  if (!ticket.invoice) return 'Pekerjaan selesai. Buat tagihan dari hasil pemeriksaan dan part yang dipakai.'
+  if (isPositive(payment.outstanding)) {
+    return `Terima pembayaran — sisa ${formatRupiah(payment.outstanding)}, boleh dicicil.`
+  }
   if (isPositive(payment.refund_due)) return `Kembalikan kelebihan bayar ${formatRupiah(payment.refund_due)} ke pelanggan.`
   return ticket.custody_location === 'CUSTOMER'
     ? 'Semua sudah beres. Tutup kunjungan.'
@@ -213,12 +244,15 @@ export function partQtyError(input: string, position: Pick<StockPositionRow, 'qt
 /** Kesalahan isian pembayaran (null bila siap). */
 export function paymentFormError(params: {
   amount: string | null
+  /** Sisa tagihan: cicilan boleh kurang, tidak boleh lebih. */
+  max: string
   method: PayMethod
   tendered: string
   confirmed: boolean
 }): string | null {
-  const { amount, method, tendered, confirmed } = params
+  const { amount, max, method, tendered, confirmed } = params
   if (!amount || !new Decimal(amount).greaterThan(0)) return 'Isi jumlah uang yang dibayar.'
+  if (new Decimal(amount).greaterThan(max)) return `Melebihi sisa tagihan ${formatRupiah(max)}.`
   if (method === 'CASH') {
     const tenderedValue = rupiahOrNull(tendered)
     if (!tenderedValue) return 'Isi uang yang diterima dari pelanggan.'

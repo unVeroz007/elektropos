@@ -1,8 +1,9 @@
 import Decimal from 'decimal.js'
 import { describe, expect, it } from 'vitest'
 import {
-  checkInvoice, closeOnsiteBlockers, draftInvoiceTotal, handoverBlockers, isoToShopLocal, lineTotal,
-  netUsedParts, partQtyError, paymentFormError, refundLimit, settlementAmount, shopLocalToIso, testResultError,
+  checkInvoice, closeOnsiteBlockers, draftInvoiceTotal, handoverBlockers, isoToShopLocal, lineTotal, netUsedParts,
+  nextStep, partQtyError, payableAmount, paymentFormError, refundLimit, shopLocalToIso, testResultError,
+  unpaidCompletionError,
 } from './logic'
 import { changedFields } from './detail/DetailsForm'
 import type { PartEvent, PaymentState, TicketDetail } from './types'
@@ -17,7 +18,8 @@ const ticket = (patch: Partial<TicketDetail> = {}): TicketDetail => ({
   id: 't1', number: 'SRV-1', version: 3, work_status: 'READY', service_location: 'STORE', custody_location: 'SHOP',
   equipment_type: 'TV', equipment_brand: null, equipment_model: null, equipment_serial: null, complaint: 'Mati',
   initial_condition: 'Lecet', accessories: null, address: null, scheduled_at: null, terminal_reason: null,
-  test_result: 'Nyala normal', created_at: '2026-09-18T01:00:00Z', closed_at: null, mechanic_name: null,
+  test_result: 'Nyala normal', created_at: '2026-09-18T01:00:00Z', closed_at: null, completed_at: null,
+  receivable: false, receivable_note: null, mechanic_name: null,
   customer: null, parent_ticket: null, child_tickets: [], not_picked_up: true, allowed_transitions: [],
   approval: { latest_revision: 1, latest_status: 'APPROVED', active: true, approved_revision: 1, approved_limit: '100000' },
   status_events: [], custody_events: [], estimates: [], part_events: [], payments: [], invoice: null,
@@ -81,35 +83,58 @@ describe('hasil uji & part', () => {
   })
 })
 
-describe('pembayaran servis (BR-07/BR-10)', () => {
-  it('pelunasan hanya setelah tagihan final dan sebesar sisa tepat', () => {
-    expect(settlementAmount(payment({ outstanding: '50000' }))).toBeNull()
-    expect(settlementAmount(payment({ invoice_id: 'i', outstanding: '50000' }))).toBe('50000')
-    expect(settlementAmount(payment({ invoice_id: 'i', outstanding: '0' }))).toBeNull()
+describe('pembayaran servis (BR-07/BR-10, keputusan pemilik 18-09-2026)', () => {
+  it('tanpa uang muka: bayar hanya setelah tagihan dibuat, sampai sisa tagihan', () => {
+    expect(payableAmount(payment({ outstanding: '50000' }))).toBeNull()
+    expect(payableAmount(payment({ invoice_id: 'i', outstanding: '50000' }))).toBe('50000')
+    expect(payableAmount(payment({ invoice_id: 'i', outstanding: '0' }))).toBeNull()
   })
-  it('batas refund: refund_due setelah final, DP hanya untuk tiket batal', () => {
+  it('cicilan boleh kurang dari sisa, tidak boleh lebih', () => {
+    const base = { max: '50000', method: 'QRIS' as const, tendered: '', confirmed: true }
+    expect(paymentFormError({ ...base, amount: '20000' })).toBeNull()
+    expect(paymentFormError({ ...base, amount: '50000' })).toBeNull()
+    expect(paymentFormError({ ...base, amount: '50001' })).toContain('Melebihi sisa')
+  })
+  it('batas refund: refund_due setelah tagihan, uang muka lama hanya untuk tiket batal', () => {
     expect(refundLimit(ticket({ payment: payment({ invoice_id: 'i', refund_due: '20000' }) }))).toBe('20000')
     expect(refundLimit(ticket({ work_status: 'CANCELLED', payment: payment({ net_received: '100000' }) }))).toBe('100000')
     expect(refundLimit(ticket({ work_status: 'WORKING', payment: payment({ net_received: '100000' }) }))).toBeNull()
   })
   it('tunai wajib uang diterima ≥ jumlah; non-tunai wajib konfirmasi eksplisit', () => {
-    expect(paymentFormError({ amount: '50000', method: 'CASH', tendered: '', confirmed: false })).not.toBeNull()
-    expect(paymentFormError({ amount: '50000', method: 'CASH', tendered: '40.000', confirmed: false })).toContain('kurang')
-    expect(paymentFormError({ amount: '50000', method: 'CASH', tendered: '50.000', confirmed: false })).toBeNull()
-    expect(paymentFormError({ amount: '50000', method: 'TRANSFER', tendered: '', confirmed: false })).toContain('konfirmasi')
-    expect(paymentFormError({ amount: '50000', method: 'QRIS', tendered: '', confirmed: true })).toBeNull()
+    const max = '90000'
+    expect(paymentFormError({ amount: '50000', max, method: 'CASH', tendered: '', confirmed: false })).not.toBeNull()
+    expect(paymentFormError({ amount: '50000', max, method: 'CASH', tendered: '40.000', confirmed: false })).toContain('kurang')
+    expect(paymentFormError({ amount: '50000', max, method: 'CASH', tendered: '50.000', confirmed: false })).toBeNull()
+    expect(paymentFormError({ amount: '50000', max, method: 'TRANSFER', tendered: '', confirmed: false })).toContain('konfirmasi')
+    expect(paymentFormError({ amount: '50000', max, method: 'QRIS', tendered: '', confirmed: true })).toBeNull()
   })
 })
 
 describe('serah terima & tutup kunjungan (BR-11, bukti audit K07)', () => {
   it('tiket READY tanpa tagihan tidak boleh diserahkan', () => {
-    expect(handoverBlockers(ticket())).toContain('Tagihan belum final.')
+    expect(handoverBlockers(ticket())).toContain('Tagihan belum dibuat.')
   })
-  it('sisa bayar atau refund tertunda menahan serah terima', () => {
-    const owing = ticket({ payment: payment({ invoice_id: 'i', outstanding: '30000', refund_due: '0' }) })
-    expect(handoverBlockers(owing).join(' ')).toContain('sisa bayar')
+  it('kelebihan bayar menahan serah terima; sisa tagihan diputuskan terpisah', () => {
     const refund = ticket({ payment: payment({ invoice_id: 'i', outstanding: '0', refund_due: '5000' }) })
     expect(handoverBlockers(refund).join(' ')).toContain('dikembalikan')
+    const owing = ticket({ payment: payment({ invoice_id: 'i', outstanding: '30000', refund_due: '0' }) })
+    expect(handoverBlockers(owing)).toEqual([])
+  })
+  it('sisa tagihan: karyawan menagih dulu; pemilik boleh meneruskan sebagai piutang dengan catatan', () => {
+    const base = { outstanding: '30000', allowUnpaid: false, note: '' }
+    expect(unpaidCompletionError({ ...base, isOwner: false })).toContain('minta pemilik')
+    expect(unpaidCompletionError({ ...base, isOwner: true })).toContain('centang')
+    expect(unpaidCompletionError({ ...base, isOwner: true, allowUnpaid: true })).toContain('catatan')
+    expect(unpaidCompletionError({ ...base, isOwner: true, allowUnpaid: true, note: 'Bayar tgl 25' })).toBeNull()
+    expect(unpaidCompletionError({ ...base, outstanding: null, isOwner: false })).toBeNull()
+  })
+  it('layanan selesai dengan piutang: tidak bisa diserahkan lagi, langkah berikutnya menagih sisa', () => {
+    const receivable = ticket({
+      custody_location: 'CUSTOMER', completed_at: '2026-09-18T05:00:00Z', receivable: true,
+      payment: payment({ invoice_id: 'i', outstanding: '30000', refund_due: '0' }),
+    })
+    expect(handoverBlockers(receivable)).toEqual(['Layanan sudah selesai.'])
+    expect(nextStep(receivable)).toContain('Tagih sisa')
   })
   it('lunas dan alat di toko: boleh diserahkan', () => {
     expect(handoverBlockers(ticket({ payment: payment({ invoice_id: 'i', outstanding: '0', refund_due: '0' }) }))).toEqual([])

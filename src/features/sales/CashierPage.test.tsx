@@ -22,7 +22,7 @@ vi.mock('../../lib/drafts', () => ({
 const lamp = {
   id: 'p1', sku: 'LMP', name: 'Lampu LED 12W', specification: '', base_unit: 'pcs', shelf: 'A1', track_segments: false,
   quantity_step: '1', version: 1, stock_shop: '10', stock_field: '0',
-  units: [{ id: 'u1', label: 'pcs', factor_base: '1', sale_step: '1', sell_price: '18000', is_default: true, version: 3 }],
+  units: [{ id: 'u1', label: 'pcs', factor_base: '1', sale_step: '1', sell_price: '18000', is_default: true, whole_roll: false, version: 3 }],
 }
 
 const preview = (qty: string, total: string) => ({

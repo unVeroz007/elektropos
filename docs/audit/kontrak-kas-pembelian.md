@@ -189,7 +189,7 @@ Error: VERSION_CONFLICT, INSUFFICIENT_STOCK, NOT_FOUND, INVALID_INPUT, INVALID_N
 Umum: `{"operation_id","supplier_return_id","expected_version","outcome","note?"}`; field lain sesuai hasil (field hasil lain ditolak).
 - `REFUND`: `{"amount":"100000","method":"CASH","cashbox":"SHOP_DRAWER"}` atau `{"amount":"100000","method":"TRANSFER","confirmed":true,"reference":"…"}`. CASH → sesi dikunci, mutasi IN `SUPPLIER_REFUND`.
 - `CREDIT`: `{"amount":"12000","reference":"…"}` → saldo kredit distributor bertambah; dipakai sebagai `payment.method = "SUPPLIER_CREDIT"` pada pembelian.
-- `REPLACEMENT`: `{"items":[{"product_unit_id","qty","rolls?","positions?","note?","acquisition_cost?"}]}` → dokumen `SUPPLIER_REPLACEMENT`, lot baru (mutasi `SUPPLIER_REPLACEMENT_IN`). Modal total = nilai klaim: isi `acquisition_cost` (6 desimal) di **semua** baris dengan jumlah = klaim, atau kosongkan semua → dibagi proporsional qty dasar (sisa 0,000001 ke pecahan terbesar lalu nomor baris).
+- `REPLACEMENT` (hasil paling umum menurut pemilik; UI memilihnya lebih dulu dan mengisi barang/jumlah yang dikembalikan): `{"items":[{"product_unit_id","qty","rolls?","positions?","note?","acquisition_cost?"}]}` → dokumen `SUPPLIER_REPLACEMENT`, lot baru (mutasi `SUPPLIER_REPLACEMENT_IN`). Modal total = nilai klaim: isi `acquisition_cost` (6 desimal) di **semua** baris dengan jumlah = klaim, atau kosongkan semua → dibagi proporsional qty dasar (sisa 0,000001 ke pecahan terbesar lalu nomor baris).
 - `REJECTED`: `note` wajib; klaim menjadi kerugian.
 
 `settlement_difference` = uang/kredit diterima − klaim (REFUND/CREDIT), 0 (REPLACEMENT), −klaim (REJECTED). Laba/rugi retur distributor terpisah dari laba kotor penjualan.
