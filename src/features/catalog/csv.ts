@@ -32,7 +32,7 @@ export const COLUMN_HELP: Record<(typeof IMPORT_COLUMNS)[number], string> = {
 
 export function templateCsv(): string {
   const example = ['LMP-010', 'Lampu LED', '10 Watt putih', 'pcs', '1', 'false', 'pcs', '1', '1', '15000', '8991234567890', 'A1']
-  return `﻿${IMPORT_COLUMNS.join(',')}\r\n${example.join(',')}\r\n`
+  return `\uFEFF${IMPORT_COLUMNS.join(',')}\r\n${example.join(',')}\r\n`
 }
 
 function detectDelimiter(firstLine: string): ',' | ';' {
@@ -49,7 +49,7 @@ function detectDelimiter(firstLine: string): ',' | ';' {
 
 /** RFC 4180 sederhana: sel berkutip boleh berisi pemisah, baris baru, dan "" untuk kutip. */
 export function parseCsv(text: string): string[][] {
-  const source = text.replace(/^﻿/, '')
+  const source = text.replace(/^\uFEFF/, '')
   const delimiter = detectDelimiter(source.split(/\r?\n/, 1)[0] ?? '')
   const rows: string[][] = []
   let row: string[] = []
